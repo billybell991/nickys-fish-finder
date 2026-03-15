@@ -168,9 +168,16 @@ app.get('/api/sst/wms', async (req, res) => {
 });
 
 // --------------- Depth / Bathymetry Proxy ---------------
-// NOAA NCEI DEM ImageServer — returns elevation (negative = below sea level)
-// Lake Ontario surface ≈ 75m above sea level
+// NOAA NCEI DEM ImageServer — ETOPO 2022 15-arc-sec bed elevation (OID 2530)
+// Locked to ETOPO layer for accurate near-shore depths; the default
+// greatlakes_lakedatum layer has 3-arc-sec grid that jumps to mid-depth
+// values at the first water pixel, grossly over-reporting near-shore depth.
+// Lake Ontario surface ≈ 75m above sea level (MSL)
 const LAKE_ONTARIO_SURFACE_M = 75;
+const ETOPO_MOSAIC_RULE = encodeURIComponent(JSON.stringify({
+  mosaicMethod: 'esriMosaicLockRaster',
+  lockRasterIds: [2530]   // ETOPO_2022_v1_15s_bed_elev
+}));
 
 app.get('/api/depth', async (req, res) => {
   const lat = parseFloat(req.query.lat);
@@ -178,7 +185,7 @@ app.get('/api/depth', async (req, res) => {
   if (isNaN(lat) || isNaN(lon) || lat < 42 || lat > 45 || lon < -80 || lon > -75) {
     return res.status(400).json({ error: 'Invalid coordinates' });
   }
-  const url = `https://gis.ngdc.noaa.gov/arcgis/rest/services/DEM_mosaics/DEM_all/ImageServer/identify?geometry=%7B%22x%22%3A${lon}%2C%22y%22%3A${lat}%7D&geometryType=esriGeometryPoint&returnGeometry=false&returnCatalogItems=false&f=json`;
+  const url = `https://gis.ngdc.noaa.gov/arcgis/rest/services/DEM_mosaics/DEM_all/ImageServer/identify?geometry=%7B%22x%22%3A${lon}%2C%22y%22%3A${lat}%7D&geometryType=esriGeometryPoint&returnGeometry=false&returnCatalogItems=false&mosaicRule=${ETOPO_MOSAIC_RULE}&f=json`;
   try {
     const response = await fetch(url);
     if (!response.ok) throw new Error(`NOAA returned ${response.status}`);
