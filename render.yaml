@@ -1,0 +1,13 @@
+# Render deployment blueprint
+# Deploy as a single web service (serves static + API proxy)
+
+services:
+  - type: web
+    name: nickys-fish-finder
+    runtime: node
+    plan: free
+    buildCommand: npm install
+    startCommand: node server.js
+    envVars:
+      - key: NODE_ENV
+        value: production
