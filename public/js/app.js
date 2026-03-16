@@ -10,6 +10,7 @@
   let weatherData = null;
   let solunarData = null;
   let aiResult = null;
+  let marineData = null;
   let panelExpanded = false;
   let selectedDate = new Date(); // currently selected forecast date
 
@@ -142,7 +143,8 @@
     // Re-run AI with forecast data
     runAI(dayOffset, forecastConditions);
 
-    // Update weather tab to highlight selected day
+    // Update weather strip and detail tab for this day
+    updateWeatherStrip(weatherData?.currentConditions, buoyData, dayOffset > 0 ? forecastConditions : null);
     renderWeatherTab(weatherData, dayOffset);
 
     // Update hot spots layer if active
@@ -154,28 +156,16 @@
   function getForecastForDate(dayOffset) {
     if (dayOffset === 0 || !weatherData?.forecast) return null;
 
-    // NWS forecast periods: "Monday", "Monday Night", "Tuesday", etc.
-    // Find the daytime period for the target date
-    const target = new Date();
-    target.setDate(target.getDate() + dayOffset);
-    const dayNames = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
-    const targetDayName = dayNames[target.getDay()];
-
-    // Search forecast periods for this day name (daytime period)
-    const period = weatherData.forecast.find(p =>
-      p.name === targetDayName && p.isDaytime !== false
-    );
-
+    // Open-Meteo forecast is day-indexed: index 0 = today, 1 = tomorrow, etc.
+    const period = weatherData.forecast[dayOffset];
     if (!period) return null;
-
-    // Build a pseudo-conditions object from forecast data
-    const windMatch = period.windSpeed ? period.windSpeed.match(/(\d+)/) : null;
-    const windSpeed = windMatch ? parseInt(windMatch[1]) : null;
 
     return {
       tempF: period.tempF,
+      tempC: period.tempC,
       description: period.shortForecast,
-      windSpeedMph: windSpeed,
+      windSpeedKmh: period.windSpeedKmh,
+      windSpeedMph: period.windSpeedKmh != null ? parseFloat((period.windSpeedKmh * 0.621371).toFixed(1)) : null,
       windDirectionText: period.windDirection || null,
       forecastDetail: period.detailedForecast,
       isForecast: true
@@ -249,20 +239,22 @@
     solunarData = Solunar.getInfo();
     updateMoonStrip(solunarData);
 
-    // Load buoys, weather in parallel (with timeout fallback)
+    // Load buoys, weather, and marine data in parallel
     const weatherTimeout = new Promise(resolve =>
       setTimeout(() => resolve({ currentConditions: null, forecast: null }), 12000)
     );
-    const [buoys, weather] = await Promise.all([
+    const [buoys, weather, marine] = await Promise.all([
       FishMap.loadBuoys().catch(() => ({})),
-      Promise.race([Weather.load(), weatherTimeout])
+      Promise.race([Weather.load(), weatherTimeout]),
+      fetch('/api/marine').then(r => r.ok ? r.json() : null).catch(() => null)
     ]);
 
     buoyData = buoys;
     weatherData = weather || { currentConditions: null, forecast: null };
+    marineData = marine;
 
-    // Update weather strip
-    updateWeatherStrip(weatherData.currentConditions, buoys);
+    // Update weather strip (wave height from marine data if no buoy waves)
+    updateWeatherStrip(weatherData.currentConditions, buoys, null);
 
     // Update weather detail tab
     renderWeatherTab(weatherData);
@@ -270,7 +262,7 @@
     // Update buoys tab
     renderBuoysTab(buoys);
 
-    // Run AI analysis
+    // Run AI analysis (also renders lake conditions card)
     runAI();
 
     // Color-code date buttons by fishing score
@@ -279,53 +271,91 @@
 
   // ---- Weather Strip (top bar) ----
 
-  function updateWeatherStrip(conditions, buoys) {
-    // Air temp — from weather or buoys
-    if (conditions?.tempF) {
-      document.getElementById('ws-temp-val').textContent = `${Math.round(conditions.tempF)}°F`;
-    } else if (buoys) {
-      const airT = Object.values(buoys).map(b => b.airTemp?.f).filter(t => t != null && !isNaN(t));
-      if (airT.length > 0) document.getElementById('ws-temp-val').textContent = `${Math.round(airT[0])}°F`;
+  function updateWeatherStrip(conditions, buoys, forecastConditions) {
+    const fc = forecastConditions; // non-null when a future day is selected
+
+    // Air temp — forecast day overrides current; prefer °C
+    if (fc?.tempC != null) {
+      document.getElementById('ws-temp-val').textContent = `${Math.round(fc.tempC)}°C`;
+    } else if (fc?.tempF != null) {
+      const c = ((parseFloat(fc.tempF) - 32) * 5 / 9).toFixed(0);
+      document.getElementById('ws-temp-val').textContent = `${c}°C`;
+    } else if (conditions?.tempC != null) {
+      document.getElementById('ws-temp-val').textContent = `${Math.round(conditions.tempC)}°C`;
+    } else if (conditions?.tempF) {
+      const c = ((parseFloat(conditions.tempF) - 32) * 5 / 9).toFixed(0);
+      document.getElementById('ws-temp-val').textContent = `${c}°C`;
+    } else if (buoys && !fc) {
+      const airT = Object.values(buoys).map(b => b.airTemp?.c).filter(t => t != null && !isNaN(t));
+      if (airT.length > 0) document.getElementById('ws-temp-val').textContent = `${Math.round(airT[0])}°C`;
     }
 
-    // Water temp — best buoy reading
-    if (buoys) {
-      const waterTemps = Object.values(buoys)
+    // Water temp — buoy average in °C (not shown for forecast days — no buoy data)
+    if (!fc && buoys) {
+      const waterTempsF = Object.values(buoys)
         .map(b => b.waterTemp?.f)
         .filter(t => t != null && !isNaN(t));
-      if (waterTemps.length > 0) {
-        const avg = waterTemps.reduce((a, b) => a + b, 0) / waterTemps.length;
+      if (waterTempsF.length > 0) {
+        const avgF = waterTempsF.reduce((a, b) => a + b, 0) / waterTempsF.length;
+        const avgC = ((avgF - 32) * 5 / 9);
         const el = document.getElementById('ws-water-val');
-        el.textContent = `${Math.round(avg)}°F`;
-        el.className = 'ws-value ' + FishMap.getTempClass(avg);
+        el.textContent = `${avgC.toFixed(1)}°C`;
+        el.className = 'ws-value ' + FishMap.getTempClass(avgF);
       } else {
         document.getElementById('ws-water-val').textContent = 'N/A';
       }
+    } else if (fc) {
+      document.getElementById('ws-water-val').textContent = 'N/A';
     }
 
-    // Wind — from weather or buoys
-    if (conditions?.windSpeedMph) {
+    // Wind — km/h; forecast day overrides
+    if (fc?.windSpeedKmh != null) {
+      const dir = fc.windDirectionText || '';
+      document.getElementById('ws-wind-val').textContent = `${dir} ${Math.round(fc.windSpeedKmh)}`;
+    } else if (fc?.windSpeedMph != null) {
+      const kmh = Math.round(parseFloat(fc.windSpeedMph) * 1.60934);
+      const dir = fc.windDirectionText || '';
+      document.getElementById('ws-wind-val').textContent = `${dir} ${kmh}`;
+    } else if (conditions?.windSpeedKmh != null) {
       const dir = conditions.windDirectionText || '';
-      document.getElementById('ws-wind-val').textContent = `${dir} ${Math.round(conditions.windSpeedMph)}`;
-    } else if (buoys) {
+      document.getElementById('ws-wind-val').textContent = `${dir} ${Math.round(conditions.windSpeedKmh)}`;
+    } else if (buoys && !fc) {
       for (const b of Object.values(buoys)) {
         if (b.wind?.speed?.mph != null && !isNaN(b.wind.speed.mph)) {
+          const kmh = Math.round(b.wind.speed.mph * 1.60934);
           const dir = b.wind.direction != null ? FishMap.degToCompass(b.wind.direction) + ' ' : '';
-          document.getElementById('ws-wind-val').textContent = `${dir}${Math.round(b.wind.speed.mph)}`;
+          document.getElementById('ws-wind-val').textContent = `${dir}${kmh}`;
           break;
         }
       }
     }
 
-    // Pressure — from weather or buoys
+    // Pressure — mb (same in metric)
     if (conditions?.pressureHpa) {
       document.getElementById('ws-pressure-val').textContent = `${parseFloat(conditions.pressureHpa).toFixed(0)} mb`;
-    } else if (buoys) {
+    } else if (buoys && !fc) {
       for (const b of Object.values(buoys)) {
         if (b.pressure != null && !isNaN(b.pressure)) {
           document.getElementById('ws-pressure-val').textContent = `${b.pressure.toFixed(0)} mb`;
           break;
         }
+      }
+    }
+
+    // Wave height — prefer buoy data, fall back to marine model data
+    const waveEl = document.getElementById('ws-wave-val');
+    if (waveEl) {
+      const buoyWaves = (!fc && buoys)
+        ? Object.values(buoys).map(b => b.waveHeight).filter(w => w != null && !isNaN(w))
+        : [];
+      if (buoyWaves.length > 0) {
+        const avg = buoyWaves.reduce((a, b) => a + b, 0) / buoyWaves.length;
+        waveEl.textContent = `${avg.toFixed(1)} m`;
+      } else if (marineData) {
+        // Use midlake station for strip, or first station with data
+        const midlake = marineData.find(s => s.id === 'midlake' && !s.error && s.waveHeight != null)
+          || marineData.find(s => !s.error && s.waveHeight != null);
+        if (midlake) waveEl.textContent = `${midlake.waveHeight.toFixed(1)} m`;
       }
     }
   }
@@ -374,29 +404,102 @@
     if (!panelExpanded) {
       document.getElementById('panel-peek').textContent = `📊 ${aiResult.rating} conditions — tap for intel`;
     }
+
+    // Render lake conditions card in intel tab
+    renderLakeConditions();
+  }
+
+  function renderLakeConditions() {
+    const grid = document.getElementById('lake-conditions-grid');
+    if (!grid) return;
+    grid.innerHTML = '';
+
+    if (!marineData || marineData.error) {
+      grid.innerHTML = '<p class="error-msg">Lake conditions unavailable</p>';
+      return;
+    }
+
+    marineData.forEach(station => {
+      const card = document.createElement('div');
+      card.className = 'marine-card';
+
+      let waveText = '--';
+      let periodText = '';
+      let dirText = '';
+
+      if (!station.error) {
+        if (station.waveHeight != null) waveText = `${station.waveHeight.toFixed(1)} m`;
+        if (station.wavePeriod != null) periodText = `${station.wavePeriod.toFixed(0)}s period`;
+        if (station.waveDirection != null) {
+          const compass = ['N','NNE','NE','ENE','E','ESE','SE','SSE','S','SSW','SW','WSW','W','WNW','NW','NNW'];
+          dirText = compass[Math.round(station.waveDirection / 22.5) % 16];
+        }
+      }
+
+      card.innerHTML =
+        `<div class="marine-flag">${sanitize(station.flag || '')}</div>` +
+        `<div class="marine-name">${sanitize(station.name)}</div>` +
+        `<div class="marine-wave">${sanitize(waveText)}</div>` +
+        (periodText || dirText
+          ? `<div class="marine-detail">${sanitize([dirText, periodText].filter(Boolean).join(' · '))}</div>`
+          : '');
+
+      grid.appendChild(card);
+    });
   }
 
   // ---- Weather Tab ----
 
   function renderWeatherTab(data, dayOffset = 0) {
     const grid = document.getElementById('weather-grid');
+    const title = document.querySelector('#weather-detail h3');
+
+    // For future days, use forecast conditions in the grid
+    const fc = dayOffset > 0 ? getForecastForDate(dayOffset) : null;
     const conditions = data?.currentConditions;
 
-    if (!conditions) {
+    if (!conditions && !fc) {
       grid.innerHTML = '<p class="error-msg">Weather data unavailable</p>';
       return;
     }
 
+    // Update section heading
+    if (title) {
+      title.textContent = dayOffset === 0 ? '🌤️ Current Conditions' : '🌤️ Forecast Conditions';
+    }
+
     grid.innerHTML = '';
 
-    const cells = [
-      { label: 'Temperature', value: conditions.tempF ? `${Math.round(conditions.tempF)}°F` : '--', detail: conditions.description },
-      { label: 'Wind', value: conditions.windSpeedMph ? `${Math.round(conditions.windSpeedMph)} mph` : '--', detail: conditions.windDirectionText || '' },
-      { label: 'Pressure', value: conditions.pressureHpa ? `${parseFloat(conditions.pressureHpa).toFixed(0)} mb` : '--', detail: Weather.getBaroTrend() },
-      { label: 'Humidity', value: conditions.humidity ? `${conditions.humidity}%` : '--', detail: '' },
-      { label: 'Visibility', value: conditions.visibility ? `${conditions.visibility} mi` : '--', detail: '' },
-      { label: 'Dew Point', value: conditions.dewPointC != null ? `${(conditions.dewPointC * 9 / 5 + 32).toFixed(0)}°F` : '--', detail: '' }
-    ];
+    let cells;
+    if (fc) {
+      // Forecast day — build from forecast period data
+      const windKmh = fc.windSpeedMph != null ? Math.round(parseFloat(fc.windSpeedMph) * 1.60934) : null;
+      const tempC = fc.tempF != null ? ((parseFloat(fc.tempF) - 32) * 5 / 9).toFixed(1) : null;
+      cells = [
+        { label: 'Temperature', value: tempC != null ? `${tempC}°C` : '--', detail: fc.description || '' },
+        { label: 'Wind', value: windKmh != null ? `${windKmh} km/h` : '--', detail: fc.windDirectionText || '' },
+        { label: 'Pressure', value: conditions?.pressureHpa ? `${parseFloat(conditions.pressureHpa).toFixed(0)} mb` : '--', detail: Weather.getBaroTrend() },
+        { label: 'Humidity', value: '--', detail: 'Forecast' },
+        { label: 'Visibility', value: '--', detail: 'Forecast' },
+        { label: 'Dew Point', value: '--', detail: 'Forecast' }
+      ];
+    } else {
+      // Today — live conditions
+      const windKmh = conditions.windSpeedKmh != null ? `${Math.round(conditions.windSpeedKmh)} km/h` :
+                      conditions.windSpeedMph != null ? `${Math.round(conditions.windSpeedMph * 1.60934)} km/h` : '--';
+      // Wave height from buoys
+      const waves = buoyData ? Object.values(buoyData).map(b => b.waveHeight).filter(w => w != null && !isNaN(w)) : [];
+      const avgWaveM = waves.length > 0 ? (waves.reduce((a, b) => a + b, 0) / waves.length).toFixed(1) : null;
+      cells = [
+        { label: 'Temperature', value: conditions.tempC != null ? `${Math.round(conditions.tempC)}°C` : conditions.tempF ? `${((parseFloat(conditions.tempF)-32)*5/9).toFixed(0)}°C` : '--', detail: conditions.description },
+        { label: 'Wind', value: windKmh, detail: conditions.windDirectionText || '' },
+        { label: 'Pressure', value: conditions.pressureHpa ? `${parseFloat(conditions.pressureHpa).toFixed(0)} mb` : '--', detail: Weather.getBaroTrend() },
+        { label: 'Humidity', value: conditions.humidity ? `${conditions.humidity}%` : '--', detail: '' },
+        { label: 'Visibility', value: conditions.visibility ? `${conditions.visibility} km` : '--', detail: '' },
+        { label: 'Dew Point', value: conditions.dewPointC != null ? `${conditions.dewPointC.toFixed(1)}°C` : '--', detail: '' },
+        { label: 'Wave Height', value: avgWaveM != null ? `${avgWaveM} m` : '--', detail: 'Lake avg' }
+      ];
+    }
 
     cells.forEach(c => {
       const div = document.createElement('div');
@@ -413,24 +516,13 @@
     const forecastEl = document.getElementById('forecast-list');
     forecastEl.innerHTML = '';
     if (data?.forecast) {
-      // For future dates, show the selected day's detail at top
+      // For future dates, show the selected day's detailed forecast at top
       if (dayOffset > 0) {
-        const targetDay = new Date();
-        targetDay.setDate(targetDay.getDate() + dayOffset);
-        const dayNames = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
-        const targetDayName = dayNames[targetDay.getDay()];
-
-        const matchingPeriods = data.forecast.filter(p =>
-          p.name === targetDayName || p.name === targetDayName + ' Night'
-        );
-        if (matchingPeriods.length > 0) {
+        const period = data.forecast[dayOffset];
+        if (period?.detailedForecast) {
           const detail = document.createElement('div');
           detail.className = 'forecast-detail-card';
-          detail.innerHTML = matchingPeriods.map(p =>
-            `<div class="forecast-detail-period">
-              <strong>${sanitize(p.name)}</strong>: ${sanitize(p.detailedForecast)}
-            </div>`
-          ).join('');
+          detail.innerHTML = `<div class="forecast-detail-period"><strong>${sanitize(period.name)}</strong>: ${sanitize(period.detailedForecast)}</div>`;
           forecastEl.appendChild(detail);
         }
       }
@@ -438,9 +530,11 @@
       data.forecast.slice(0, 8).forEach(period => {
         const item = document.createElement('div');
         item.className = 'forecast-item';
+        const tempHi = period.tempC != null ? `${Math.round(period.tempC)}°C` : '--';
+        const tempLo = period.tempCMin != null ? ` / ${Math.round(period.tempCMin)}°C` : '';
         item.innerHTML = `
           <span class="forecast-name">${sanitize(period.name)}</span>
-          <span class="forecast-temp">${sanitize(period.tempF)}°${sanitize(period.tempUnit)}</span>
+          <span class="forecast-temp">${sanitize(tempHi + tempLo)}</span>
           <span class="forecast-short">${sanitize(period.shortForecast)}</span>
         `;
         forecastEl.appendChild(item);
@@ -469,20 +563,23 @@
 
       if (buoy.waterTemp?.f != null && !isNaN(buoy.waterTemp.f)) {
         const cls = FishMap.getTempClass(buoy.waterTemp.f);
-        rows += buoyRow('Water Temp', `${buoy.waterTemp.f}°F`, cls);
+        const c = ((buoy.waterTemp.f - 32) * 5 / 9).toFixed(1);
+        rows += buoyRow('Water Temp', `${c}°C`, cls);
       }
       if (buoy.airTemp?.f != null && !isNaN(buoy.airTemp.f)) {
-        rows += buoyRow('Air Temp', `${buoy.airTemp.f}°F`);
+        const c = ((buoy.airTemp.f - 32) * 5 / 9).toFixed(1);
+        rows += buoyRow('Air Temp', `${c}°C`);
       }
       if (buoy.wind?.speed?.mph != null && !isNaN(buoy.wind.speed.mph)) {
+        const kmh = (buoy.wind.speed.mph * 1.60934).toFixed(1);
         const dir = buoy.wind.direction != null ? FishMap.degToCompass(buoy.wind.direction) + ' ' : '';
-        rows += buoyRow('Wind', `${dir}${buoy.wind.speed.mph} mph`);
+        rows += buoyRow('Wind', `${dir}${kmh} km/h`);
       }
       if (buoy.pressure != null && !isNaN(buoy.pressure)) {
         rows += buoyRow('Pressure', `${buoy.pressure} mb`);
       }
       if (buoy.waveHeight != null && !isNaN(buoy.waveHeight)) {
-        rows += buoyRow('Waves', `${(buoy.waveHeight * 3.281).toFixed(1)} ft`);
+        rows += buoyRow('Waves', `${buoy.waveHeight.toFixed(1)} m`);
       }
       if (buoy.timestamp) {
         rows += buoyRow('Updated', buoy.timestamp);

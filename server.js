@@ -18,12 +18,15 @@ app.use(express.static(path.join(__dirname, 'public')));
 // NDBC text feeds don't have CORS headers, so we proxy them
 
 const LAKE_ONTARIO_BUOYS = {
-  '45012': { name: 'Mid-Lake Ontario', lat: 43.623, lon: -77.398 },
-  '45135': { name: 'Rochester (West)', lat: 43.426, lon: -77.649 },
-  '45139': { name: 'West Lake Ontario', lat: 43.252, lon: -79.529 },
+  // NOAA NDBC shore stations (US side) — the numbered 45xxx buoys are seasonal
+  // and often offline; these NWLON stations are the reliable year-round feeds
   'RPRN6': { name: 'Rochester, NY', lat: 43.269, lon: -77.596 },
   'OSGN6': { name: 'Oswego, NY', lat: 43.464, lon: -76.512 },
-  'YGNN6': { name: 'Youngstown, NY', lat: 43.267, lon: -79.053 }
+  'YGNN6': { name: 'Youngstown, NY', lat: 43.267, lon: -79.053 },
+  // Seasonal offshore buoys (active May–Nov typically)
+  '45012': { name: 'Mid-Lake Ontario', lat: 43.623, lon: -77.398 },
+  '45135': { name: 'West Lake Ontario', lat: 43.426, lon: -77.649 },
+  '45139': { name: 'West End (Niagara)', lat: 43.252, lon: -79.529 }
 };
 
 // Proxy a single buoy's latest observation
@@ -124,6 +127,49 @@ function parseNdbcData(text, stationId) {
     raw: record
   };
 }
+
+// --------------- Open-Meteo Marine Proxy ---------------
+// Fetches wave height / direction / period for key lake positions
+// Open-Meteo Marine API is free, no key, CORS-restricted so we proxy it
+
+const MARINE_STATIONS = [
+  { id: 'toronto',   name: 'Toronto / North Shore', lat: 43.65, lon: -79.38, flag: '🇨🇦' },
+  { id: 'cobourg',   name: 'Cobourg / Presquile',   lat: 43.96, lon: -77.83, flag: '🇨🇦' },
+  { id: 'kingston',  name: 'Kingston Approach',     lat: 44.10, lon: -76.80, flag: '🇨🇦' },
+  { id: 'midlake',   name: 'Mid-Lake',              lat: 43.70, lon: -77.40, flag: '🌊' },
+  { id: 'rochester', name: 'Rochester Area',        lat: 43.28, lon: -77.60, flag: '🇺🇸' },
+  { id: 'niagara',   name: 'Niagara / West End',    lat: 43.27, lon: -79.05, flag: '🇺🇸' }
+];
+
+app.get('/api/marine', async (req, res) => {
+  try {
+    // Fetch wave data for all stations in parallel
+    const fetches = MARINE_STATIONS.map(async (s) => {
+      const url = `https://marine-api.open-meteo.com/v1/marine` +
+        `?latitude=${s.lat}&longitude=${s.lon}` +
+        `&current=wave_height,wave_direction,wave_period` +
+        `&daily=wave_height_max&forecast_days=8&timezone=America/Toronto`;
+      try {
+        const r = await fetch(url, { signal: AbortSignal.timeout(8000) });
+        if (!r.ok) return { ...s, error: true };
+        const data = await r.json();
+        return {
+          ...s,
+          waveHeight:    data.current?.wave_height    ?? null,
+          waveDirection: data.current?.wave_direction ?? null,
+          wavePeriod:    data.current?.wave_period    ?? null,
+          dailyMaxWave:  data.daily?.wave_height_max  ?? []
+        };
+      } catch {
+        return { ...s, error: true };
+      }
+    });
+    const results = await Promise.all(fetches);
+    res.json(results);
+  } catch (err) {
+    res.status(502).json({ error: 'Marine data unavailable', detail: err.message });
+  }
+});
 
 // --------------- GLERL SST Proxy ---------------
 // Proxy GLERL Great Lakes SST WMS requests to avoid CORS issues

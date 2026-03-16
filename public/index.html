@@ -41,7 +41,7 @@
         <div class="help-section">
           <button class="help-toggle">📊 Weather &amp; Conditions Strip<span class="help-chevron">▶</span></button>
           <div class="help-content">
-            <p>The bar at the top shows current conditions at a glance: air temperature, lake water temperature (averaged from NOAA buoys), wind speed and direction, barometric pressure, and moon phase. Data refreshes automatically every 15 minutes or tap 🔄 to refresh manually.</p>
+            <p>The bar at the top shows current conditions at a glance: air temperature, lake water temperature (averaged from NOAA buoys), wind speed and direction (km/h), barometric pressure, wave height, and moon phase. Data refreshes automatically every 15 minutes or tap 🔄 to refresh manually.</p>
           </div>
         </div>
 
@@ -55,7 +55,7 @@
         <div class="help-section">
           <button class="help-toggle">🗺️ Interactive Map<span class="help-chevron">▶</span></button>
           <div class="help-content">
-            <p>An interactive map of Lake Ontario centered on the south shore fishing grounds. Tap anywhere on the lake to get a detailed <strong>Spot Report</strong> showing estimated water temperature, depth, nearest buoy readings, sun/moon times, solunar rating, and nearby seasonal hot spots.</p>
+            <p>An interactive map of Lake Ontario centred on the Canadian north shore (Toronto area). Tap anywhere on the lake to get a detailed <strong>Spot Report</strong> showing estimated water temperature (°C), depth (m), nearest buoy readings, sun/moon times, solunar rating, and nearby seasonal hot spots.</p>
             <p>Choose from 5 base maps: Topographic, Satellite, Ocean, NatGeo, and Dark mode.</p>
           </div>
         </div>
@@ -66,7 +66,7 @@
             <p>Toggle these layers from the "Tap for map layers" panel:</p>
             <ul>
               <li><strong>SST (Sea Surface Temperature)</strong> — Satellite thermal imagery from NOAA GLERL showing water temperature patterns. Look for sharp color transitions — those thermal breaks concentrate baitfish and salmon.</li>
-              <li><strong>Buoys</strong> — NOAA buoy stations on the lake with real-time water temp, wind, waves, and pressure. Tap a buoy marker for full details.</li>
+              <li><strong>Buoys</strong> — NOAA NDBC (US side) and Environment Canada (Canadian north shore) buoy stations, showing real-time water temp, wind, waves, and pressure. Tap a buoy marker for full details.</li>
               <li><strong>Depth</strong> — Bathymetry contour layer showing underwater terrain and depth soundings.</li>
               <li><strong>Hot Spots</strong> — Seasonal fishing hot spots based on historical patterns. Circles are color-coded from green (moderate) to red (peak activity). Intensity percentages update based on the selected date's month.</li>
             </ul>
@@ -78,28 +78,28 @@
           <div class="help-content">
             <p>A rule-based expert system that scores current or forecasted conditions on a 0–100 scale. It evaluates:</p>
             <ul>
-              <li><strong>Water Temperature</strong> — Optimal Chinook range is 48–55°F. The system rates how close conditions are to the sweet spot.</li>
+              <li><strong>Water Temperature</strong> — Optimal Chinook range is 9–13°C. The system rates how close conditions are to the sweet spot.</li>
               <li><strong>Barometric Pressure</strong> — High/stable pressure is good; rapidly falling pressure before a front can trigger feeding frenzies.</li>
-              <li><strong>Wind</strong> — Light-moderate wind (5–12 mph) is ideal. Direction affects baitfish distribution and upwelling.</li>
+              <li><strong>Wind</strong> — Light-moderate wind (8–20 km/h) is ideal. Direction affects baitfish distribution and upwelling.</li>
               <li><strong>Time of Day</strong> — Dawn and dusk are prime feeding windows.</li>
               <li><strong>Moon Phase (Solunar)</strong> — New and full moons correlate with increased fish activity.</li>
-              <li><strong>Season</strong> — Analysis adjusts for spring browns, summer open-water kings, fall staging, and winter steelhead.</li>
+              <li><strong>Season</strong> — Analysis adjusts for spring browns, summer open-water kings, fall staging on both shores, and winter steelhead in Ontario tributaries.</li>
             </ul>
-            <p>You also get lure recommendations, depth strategy, trolling speed tips, best time windows, and where to focus on the lake.</p>
+            <p>You also get lure recommendations, depth strategy (metres), trolling speed tips (km/h), best time windows, and where to focus on the lake.</p>
           </div>
         </div>
 
         <div class="help-section">
           <button class="help-toggle">🌤️ Weather Tab<span class="help-chevron">▶</span></button>
           <div class="help-content">
-            <p>Detailed current conditions from the nearest NWS station: temperature, wind, pressure, humidity, visibility, and dew point. Below that, the NWS 7-day forecast with temperatures and conditions for each period. When viewing a future date, the selected day's detailed forecast appears at the top.</p>
+            <p>Detailed current conditions from Open-Meteo: temperature (°C), wind (km/h), pressure, humidity, visibility (km), and dew point. Below that, an 8-day daily forecast showing high/low temps and conditions. When viewing a future date, that day’s detailed forecast is shown at the top of the forecast list, and the conditions grid updates to reflect it.</p>
           </div>
         </div>
 
         <div class="help-section">
           <button class="help-toggle">🌊 Buoys Tab<span class="help-chevron">▶</span></button>
           <div class="help-content">
-            <p>Real-time readings from NOAA NDBC buoy stations across Lake Ontario. Each card shows water temperature, air temperature, wind speed and direction, barometric pressure, wave height, and the last update timestamp. Data is proxied through the server to avoid browser restrictions.</p>
+            <p>Real-time readings from NOAA NDBC buoy stations on the US side and Environment Canada buoy stations on the Canadian north shore of Lake Ontario. Each card shows water temperature (°C), air temperature, wind speed (km/h), barometric pressure, wave height (m), and the last update timestamp. Data is proxied through the server to avoid browser restrictions.</p>
           </div>
         </div>
 
@@ -108,11 +108,11 @@
           <div class="help-content">
             <p>Tap anywhere on the lake to get a pinpoint report for that location. The popup shows:</p>
             <ul>
-              <li><strong>Depth</strong> — Bottom depth from NOAA ETOPO bathymetry data, with fishing tips for that depth range.</li>
-              <li><strong>Estimated Water Temp</strong> — Interpolated from nearby buoy readings using inverse-distance weighting.</li>
-              <li><strong>Nearest Buoys</strong> — Distance and current readings from the 3 closest stations.</li>
+              <li><strong>Depth</strong> — Bottom depth from NOAA ETOPO bathymetry data (shown in metres), with fishing tips for that depth range.</li>
+              <li><strong>Estimated Water Temp</strong> — Interpolated from nearby buoy readings using inverse-distance weighting, displayed in °C.</li>
+              <li><strong>Nearest Buoys</strong> — Distance (km) and current readings from the 3 closest stations (both NOAA and Environment Canada).</li>
               <li><strong>Sun &amp; Moon</strong> — Sunrise/sunset times, moon phase, and solunar fishing rating.</li>
-              <li><strong>Nearby Hot Spots</strong> — Seasonal fishing zones within 10 miles, with species and depth info.</li>
+              <li><strong>Nearby Hot Spots</strong> — Seasonal fishing zones within 16 km, with species and depth info.</li>
             </ul>
           </div>
         </div>
@@ -120,11 +120,13 @@
         <div class="help-section">
           <button class="help-toggle">🔥 Seasonal Hot Spots<span class="help-chevron">▶</span></button>
           <div class="help-content">
-            <p>16 curated fishing zones across Lake Ontario, each with per-month intensity ratings based on historical catch patterns, NYSDEC reports, and charter captain knowledge. Key spots include:</p>
+            <p>24 curated fishing zones across the full Lake Ontario shoreline — both the Canadian north shore (Toronto–Cobourg corridor, Niagara) and the US south shore, each with per-month intensity ratings based on historical catch patterns, MNR/OMNRF reports, NYSDEC data, and charter captain knowledge. Key spots include:</p>
             <ul>
-              <li>Salmon River Mouth — Premier fall king salmon destination</li>
-              <li>Niagara Bar — Year-round baitfish magnet</li>
-              <li>Wilson/Olcott — Gateway to the 30-mile bank summer trolling</li>
+              <li>Port Hope / Ganaraska River — Ontario’s premier salmon & steelhead river</li>
+              <li>Port Credit / Credit River — Top Toronto-area tributary</li>
+              <li>Toronto Waterfront — Urban salmon fishery, spring browns off the piers</li>
+              <li>Salmon River Mouth — Premier fall king salmon destination (US side)</li>
+              <li>Niagara Bar — Year-round baitfish magnet (both sides benefit)</li>
               <li>Mid-Lake Thermal Zone — Summer salmon highway</li>
             </ul>
             <p>Toggle the Hot Spots overlay on the map to see all zones. The intensity adjusts when you switch dates to a different month.</p>
@@ -135,8 +137,8 @@
           <button class="help-toggle">⚙️ Data Sources<span class="help-chevron">▶</span></button>
           <div class="help-content">
             <ul>
-              <li><strong>Weather</strong> — NOAA National Weather Service API (free, no key required)</li>
-              <li><strong>Buoys</strong> — NOAA NDBC real-time station observations</li>
+              <li><strong>Weather</strong> — Open-Meteo API (free, no API key, global coverage including Canada)</li>
+              <li><strong>Buoys</strong> — NOAA NDBC (US) + Environment Canada (Canadian north shore) real-time stations</li>
               <li><strong>Water Temp Imagery</strong> — NOAA GLERL Great Lakes Surface Environmental Analysis + NASA GIBS fallback</li>
               <li><strong>Depth</strong> — NOAA NCEI ETOPO 2022 bathymetry via ArcGIS ImageServer</li>
               <li><strong>Solunar</strong> — Jean Meeus astronomical algorithms (calculated locally, no API)</li>
@@ -152,19 +154,23 @@
   <div id="weather-strip">
     <div class="weather-item" id="ws-temp">
       <span class="ws-label">Air</span>
-      <span class="ws-value" id="ws-temp-val">--°F</span>
+      <span class="ws-value" id="ws-temp-val">--°C</span>
     </div>
     <div class="weather-item" id="ws-water">
       <span class="ws-label">Water</span>
-      <span class="ws-value" id="ws-water-val">--°F</span>
+      <span class="ws-value" id="ws-water-val">--°C</span>
     </div>
     <div class="weather-item" id="ws-wind">
       <span class="ws-label">Wind</span>
-      <span class="ws-value" id="ws-wind-val">-- mph</span>
+      <span class="ws-value" id="ws-wind-val">-- km/h</span>
     </div>
     <div class="weather-item" id="ws-pressure">
       <span class="ws-label">Baro</span>
       <span class="ws-value" id="ws-pressure-val">-- mb</span>
+    </div>
+    <div class="weather-item" id="ws-wave">
+      <span class="ws-label">Waves</span>
+      <span class="ws-value" id="ws-wave-val">-- m</span>
     </div>
     <div class="weather-item" id="ws-moon">
       <span class="ws-label">Moon</span>
@@ -247,6 +253,10 @@
             <span class="rating-value" id="ai-rating-val">Loading...</span>
           </div>
           <p id="ai-summary-text">Analyzing conditions...</p>
+        </div>
+        <div id="ai-lake-conditions" class="intel-card">
+          <h3>🌊 Lake Surface Conditions</h3>
+          <div id="lake-conditions-grid"></div>
         </div>
         <div id="ai-recommendations">
           <h3>🎣 Recommendations</h3>

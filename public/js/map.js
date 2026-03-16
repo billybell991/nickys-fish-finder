@@ -45,8 +45,8 @@ const FishMap = (() => {
     })
   };
 
-  // Lake Ontario bounds
-  const LAKE_CENTER = [43.65, -77.85];
+  // Lake Ontario bounds — centred on the Canadian north shore (Toronto area)
+  const LAKE_CENTER = [43.80, -78.50];
   const LAKE_BOUNDS = [[43.1, -79.9], [44.3, -76.0]];
 
   function init() {
@@ -224,8 +224,8 @@ const FishMap = (() => {
 
   // ---- Spot Report (tap on lake) ----
 
-  function haversine(lat1, lon1, lat2, lon2) {
-    const R = 3959; // miles
+  function haversineKm(lat1, lon1, lat2, lon2) {
+    const R = 6371; // km
     const dLat = (lat2 - lat1) * Math.PI / 180;
     const dLon = (lon2 - lon1) * Math.PI / 180;
     const a = Math.sin(dLat / 2) ** 2 +
@@ -234,10 +234,14 @@ const FishMap = (() => {
     return R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
   }
 
+  function haversine(lat1, lon1, lat2, lon2) {
+    return haversineKm(lat1, lon1, lat2, lon2) * 0.621371; // miles for internal temp IDW
+  }
+
   function getNearestBuoys(lat, lon) {
     return Object.entries(buoyData)
       .filter(([, b]) => b.lat && b.lon && !b.error)
-      .map(([id, b]) => ({ id, ...b, dist: haversine(lat, lon, b.lat, b.lon) }))
+      .map(([id, b]) => ({ id, ...b, dist: haversineKm(lat, lon, b.lat, b.lon) }))
       .sort((a, b) => a.dist - b.dist);
   }
 
@@ -267,7 +271,7 @@ const FishMap = (() => {
       rows.push(popupRow('Depth', '⏳ Loading...'));
     } else if (depthData && !depthData.onLand && depthData.depthFt) {
       const depthClass = getDepthClass(depthData.depthFt);
-      rows.push(`<div class="popup-row"><span class="popup-label">Depth</span><span class="popup-value depth-val ${depthClass}">${depthData.depthFt} ft (${depthData.depthM} m)</span></div>`);
+      rows.push(`<div class="popup-row"><span class="popup-label">Depth</span><span class="popup-value depth-val ${depthClass}">${depthData.depthM} m (${depthData.depthFt} ft)</span></div>`);
       const depthTip = getDepthTip(depthData.depthFt);
       if (depthTip) rows.push(`<div class="spot-tip">${esc(depthTip)}</div>`);
     } else if (depthData && depthData.onLand) {
@@ -277,8 +281,9 @@ const FishMap = (() => {
     // Estimated water temp
     const tempEst = estimateWaterTemp(lat, lng);
     if (tempEst) {
+      const tempC = ((tempEst.temp - 32) * 5 / 9);
       const color = getTempColor(tempEst.temp);
-      rows.push(`<div class="popup-row"><span class="popup-label">Est. Water Temp</span><span class="popup-value" style="color:${esc(color)};font-size:15px">${tempEst.temp.toFixed(1)}°F</span></div>`);
+      rows.push(`<div class="popup-row"><span class="popup-label">Est. Water Temp</span><span class="popup-value" style="color:${esc(color)};font-size:15px">${tempC.toFixed(1)}°C</span></div>`);
       rows.push(popupRow('Confidence', tempEst.confidence));
 
       // Quick fishing tip based on temp
@@ -291,14 +296,18 @@ const FishMap = (() => {
     if (nearby.length > 0) {
       rows.push('<div class="popup-section">📡 Nearest Buoys</div>');
       nearby.forEach(b => {
-        let info = `${b.dist.toFixed(1)} mi`;
-        if (b.waterTemp?.f != null && !isNaN(b.waterTemp.f)) info += ` · ${b.waterTemp.f}°F`;
+        let info = `${(b.dist * 1.60934).toFixed(1)} km`;
+        if (b.waterTemp?.f != null && !isNaN(b.waterTemp.f)) {
+          const c = ((b.waterTemp.f - 32) * 5 / 9).toFixed(1);
+          info += ` · ${c}°C`;
+        }
         if (b.wind?.speed?.mph != null && !isNaN(b.wind.speed.mph)) {
+          const kmh = (b.wind.speed.mph * 1.60934).toFixed(0);
           const dir = b.wind.direction != null ? degToCompass(b.wind.direction) + ' ' : '';
-          info += ` · ${dir}${b.wind.speed.mph} mph`;
+          info += ` · ${dir}${kmh} km/h`;
         }
         if (b.waveHeight != null && !isNaN(b.waveHeight)) {
-          info += ` · ${(b.waveHeight * 3.281).toFixed(1)}ft waves`;
+          info += ` · ${b.waveHeight.toFixed(1)}m waves`;
         }
         rows.push(popupRow(esc(b.name || b.id), info));
       });
@@ -320,13 +329,13 @@ const FishMap = (() => {
     // Nearby hot spots
     if (typeof HotSpots !== 'undefined') {
       const month = currentHotspotMonth;
-      const nearbySpots = HotSpots.getNearby(lat, lng, month, 10);
+      const nearbySpots = HotSpots.getNearby(lat, lng, month, 16); // 16 km
       if (nearbySpots.length > 0) {
         rows.push('<div class="popup-section">🔥 Nearby Hot Spots</div>');
         nearbySpots.slice(0, 3).forEach(hs => {
           const pct = Math.round(hs.intensity * 100);
           const speciesBrief = hs.species.slice(0, 3).join(', ');
-          rows.push(popupRow(esc(hs.name), `${pct}% · ${hs.dist.toFixed(1)} mi`));
+          rows.push(popupRow(esc(hs.name), `${pct}% · ${hs.dist.toFixed(1)} km`));
           rows.push(`<div class="spot-tip" style="margin:2px 0 4px">${esc(speciesBrief)} — ${esc(hs.depth)}</div>`);
         });
       }
@@ -336,12 +345,13 @@ const FishMap = (() => {
   }
 
   function getSpotTip(tempF) {
-    if (tempF >= 48 && tempF <= 55) return '🔥 Prime salmon zone! Fish here — the thermocline is active.';
-    if (tempF >= 45 && tempF < 48) return '👍 Cool but productive. Coho territory. Slow your presentation.';
-    if (tempF > 55 && tempF <= 60) return '⬇️ Warm surface — fish are deeper. Drop below the thermocline.';
-    if (tempF > 60) return '🌡️ Too warm at surface. Target 60-100ft depth for salmon.';
-    if (tempF >= 40 && tempF < 45) return '❄️ Cold water. Fish slow, stay near structure and creek mouths.';
-    if (tempF < 40) return '🥶 Very cold. Slow trolling, small baits, stick to warmer pockets.';
+    const tempC = ((tempF - 32) * 5 / 9).toFixed(1);
+    if (tempF >= 48 && tempF <= 55) return `🔥 Prime salmon zone! (${tempC}°C) Fish here — the thermocline is active.`;
+    if (tempF >= 45 && tempF < 48) return `👍 Cool but productive. (${tempC}°C) Coho territory. Slow your presentation.`;
+    if (tempF > 55 && tempF <= 60) return `⬇️ Warm surface — (${tempC}°C) fish are deeper. Drop below the thermocline.`;
+    if (tempF > 60) return `🌡️ Too warm at surface (${tempC}°C). Target 18–30m depth for salmon.`;
+    if (tempF >= 40 && tempF < 45) return `❄️ Cold water (${tempC}°C). Fish slow, stay near structure and creek mouths.`;
+    if (tempF < 40) return `🥶 Very cold (${tempC}°C). Slow trolling, small baits, stick to warmer pockets.`;
     return '';
   }
 
@@ -353,12 +363,13 @@ const FishMap = (() => {
   }
 
   function getDepthTip(depthFt) {
-    if (depthFt < 20) return '🏖️ Very shallow — browns cruise here in spring/fall. Stickbaits & spoons.';
-    if (depthFt < 50) return '🎯 Nearshore zone — great for brown trout and early-season staging salmon.';
-    if (depthFt < 100) return '🐟 Mid-depth — productive for downrigger fishing. Set lines at 40-80ft.';
-    if (depthFt < 200) return '⬇️ Deep water — use downriggers or copper/lead core. Thermocline fishing territory.';
-    if (depthFt < 500) return '🏔️ Very deep — salmon stack on thermocline breaks here. Fish 50-120ft down.';
-    return '🌊 Open abyss — deepest water. Fish suspend at thermocline depth, not the bottom.';
+    const depthM = Math.round(depthFt * 0.3048);
+    if (depthFt < 20) return `🏖️ Very shallow (~${depthM} m) — browns cruise here in spring/fall. Stickbaits & spoons.`;
+    if (depthFt < 50) return `🎯 Nearshore zone (~${depthM} m) — great for brown trout and early-season staging salmon.`;
+    if (depthFt < 100) return `🐟 Mid-depth (~${depthM} m) — productive for downrigger fishing. Set lines at 12–25 m.`;
+    if (depthFt < 200) return `⬇️ Deep water (~${depthM} m) — use downriggers or copper/lead core. Thermocline fishing territory.`;
+    if (depthFt < 500) return `🏔️ Very deep (~${depthM} m) — salmon stack on thermocline breaks. Fish 15–36 m down.`;
+    return `🌊 Open abyss (~${depthM} m) — deepest water. Fish suspend at thermocline depth, not the bottom.`;
   }
 
   // Fetch buoy data from our proxy and display on map
@@ -424,22 +435,24 @@ const FishMap = (() => {
     rows.push(`<h4>${esc(buoy.name || buoy.station)}</h4>`);
 
     if (buoy.waterTemp?.f != null && !isNaN(buoy.waterTemp.f)) {
-      rows.push(popupRow('Water Temp', `${buoy.waterTemp.f}°F (${buoy.waterTemp.c}°C)`));
+      const c = ((buoy.waterTemp.f - 32) * 5 / 9).toFixed(1);
+      rows.push(popupRow('Water Temp', `${c}°C`));
     }
     if (buoy.airTemp?.f != null && !isNaN(buoy.airTemp.f)) {
-      rows.push(popupRow('Air Temp', `${buoy.airTemp.f}°F`));
+      const c = ((buoy.airTemp.f - 32) * 5 / 9).toFixed(1);
+      rows.push(popupRow('Air Temp', `${c}°C`));
     }
     if (buoy.wind?.speed?.mph != null && !isNaN(buoy.wind.speed.mph)) {
+      const kmh = (buoy.wind.speed.mph * 1.60934).toFixed(1);
       const dir = buoy.wind.direction != null ? degToCompass(buoy.wind.direction) + ' ' : '';
-      const gust = buoy.wind.gust?.mph && !isNaN(buoy.wind.gust.mph) ? ` (gusts ${buoy.wind.gust.mph})` : '';
-      rows.push(popupRow('Wind', `${dir}${buoy.wind.speed.mph} mph${gust}`));
+      const gust = buoy.wind.gust?.mph && !isNaN(buoy.wind.gust.mph) ? ` (gusts ${(buoy.wind.gust.mph * 1.60934).toFixed(1)} km/h)` : '';
+      rows.push(popupRow('Wind', `${dir}${kmh} km/h${gust}`));
     }
     if (buoy.pressure != null && !isNaN(buoy.pressure)) {
       rows.push(popupRow('Pressure', `${buoy.pressure} mb`));
     }
     if (buoy.waveHeight != null && !isNaN(buoy.waveHeight)) {
-      const ft = (buoy.waveHeight * 3.281).toFixed(1);
-      rows.push(popupRow('Waves', `${ft} ft (${buoy.waveHeight} m)`));
+      rows.push(popupRow('Waves', `${buoy.waveHeight.toFixed(1)} m`));
     }
     if (buoy.timestamp) {
       rows.push(popupRow('Updated', esc(buoy.timestamp)));

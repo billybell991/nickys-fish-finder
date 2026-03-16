@@ -621,6 +621,47 @@ html, body {
   color: var(--danger);
 }
 
+/* Marine / Lake Conditions grid */
+#lake-conditions-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 8px;
+}
+
+.marine-card {
+  background: rgba(0, 150, 200, 0.08);
+  border: 1px solid rgba(0, 150, 200, 0.25);
+  border-radius: 10px;
+  padding: 10px 8px 8px;
+  text-align: center;
+}
+
+.marine-flag {
+  font-size: 16px;
+  line-height: 1;
+  margin-bottom: 2px;
+}
+
+.marine-name {
+  font-size: 10px;
+  color: var(--text-secondary);
+  margin-bottom: 4px;
+  line-height: 1.2;
+}
+
+.marine-wave {
+  font-size: 17px;
+  font-weight: 700;
+  color: #4fc3f7;
+  line-height: 1.1;
+}
+
+.marine-detail {
+  font-size: 10px;
+  color: var(--text-secondary);
+  margin-top: 3px;
+}
+
 /* Recommendation cards */
 .rec-card {
   background: var(--bg-card);

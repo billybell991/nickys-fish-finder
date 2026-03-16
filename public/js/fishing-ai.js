@@ -130,42 +130,43 @@ const FishingAI = (() => {
   function analyzeWaterTemp(avgTempF) {
     let scoreImpact = 0;
     let icon, title, detail;
+    const avgTempC = ((avgTempF - 32) * 5 / 9).toFixed(1);
 
     if (avgTempF >= 48 && avgTempF <= 55) {
       scoreImpact = 20;
       icon = '🔥';
       title = 'Optimal Salmon Temp';
-      detail = `Water at ${avgTempF.toFixed(1)}°F — right in the Chinook sweet spot (48-55°F). Fish should be active and feeding aggressively.`;
+      detail = `Water at ${avgTempC}°C — right in the Chinook sweet spot (9–13°C). Fish should be active and feeding aggressively.`;
     } else if (avgTempF >= 45 && avgTempF < 48) {
       scoreImpact = 10;
       icon = '👍';
       title = 'Good Water Temp';
-      detail = `Water at ${avgTempF.toFixed(1)}°F — cool side but Coho love this range. Chinook may be slightly deeper. Slow your presentation.`;
+      detail = `Water at ${avgTempC}°C — cool side but Coho love this range. Chinook may be slightly deeper. Slow your presentation.`;
     } else if (avgTempF > 55 && avgTempF <= 60) {
       scoreImpact = 5;
       icon = '👍';
       title = 'Decent Water Temp';
-      detail = `Water at ${avgTempF.toFixed(1)}°F — above optimal salmon range. Fish will be seeking cooler water at depth. Steelhead still active.`;
+      detail = `Water at ${avgTempC}°C — above optimal salmon range. Fish will be seeking cooler water at depth. Steelhead still active.`;
     } else if (avgTempF > 60 && avgTempF <= 68) {
       scoreImpact = -10;
       icon = '⚠️';
       title = 'Warm Surface Water';
-      detail = `Water at ${avgTempF.toFixed(1)}°F — too warm for surface salmon. Look for the thermocline — fish will be stacked at depth where temp drops to 48-55°F range.`;
+      detail = `Water at ${avgTempC}°C — too warm for surface salmon. Look for the thermocline — fish will be stacked at depth where temp drops to 9–13°C.`;
     } else if (avgTempF < 40) {
       scoreImpact = -10;
       icon = '🥶';
       title = 'Very Cold Water';
-      detail = `Water at ${avgTempF.toFixed(1)}°F — extremely cold. Metabolism is slow. Fish deeper, use natural presentations, very slow trolling speeds.`;
+      detail = `Water at ${avgTempC}°C — extremely cold. Metabolism is slow. Fish deeper, use natural presentations, very slow trolling speeds.`;
     } else if (avgTempF >= 40 && avgTempF < 45) {
       scoreImpact = 0;
       icon = '❄️';
       title = 'Cold Water';
-      detail = `Water at ${avgTempF.toFixed(1)}°F — cold but fishable. Salmon will be sluggish. Slower trolling speeds, smaller profiles, stick to structure.`;
+      detail = `Water at ${avgTempC}°C — cold but fishable. Salmon will be sluggish. Slower trolling speeds, smaller profiles, stick to structure.`;
     } else {
       scoreImpact = -20;
       icon = '🌡️';
       title = 'Extreme Temperature';
-      detail = `Water at ${avgTempF.toFixed(1)}°F — outside productive range. Fish deep structure or wait for conditions to change.`;
+      detail = `Water at ${avgTempC}°C — outside productive range. Fish deep structure or wait for conditions to change.`;
     }
 
     return { icon, title, detail, scoreImpact, factor: 'waterTemp', value: avgTempF };
@@ -203,35 +204,35 @@ const FishingAI = (() => {
   function analyzeWind(wind) {
     let scoreImpact = 0;
     let icon, title, detail;
-    const speed = wind.speed;
+    const speedMph = wind.speed;
+    const speedKmh = Math.round(speedMph * 1.60934);
     const dir = wind.direction != null ? FishMap.degToCompass(wind.direction) : '';
 
-    if (speed < 5) {
+    if (speedMph < 5) {
       scoreImpact = 5;
       icon = '🍃';
       title = 'Calm Winds';
-      detail = `Wind ${dir} at ${speed} mph — slick conditions. Fish can be spooky in flat calm. Consider deeper lines and subtle presentations.`;
-    } else if (speed <= 12) {
+      detail = `Wind ${dir} at ${speedKmh} km/h — slick conditions. Fish can be spooky in flat calm. Consider deeper lines and subtle presentations.`;
+    } else if (speedMph <= 12) {
       scoreImpact = 10;
       icon = '💨';
       title = 'Light-Moderate Wind';
-      detail = `Wind ${dir} at ${speed} mph — ideal conditions. Enough chop to mask topside noise, pushes baitfish and creates productive current seams.`;
-    } else if (speed <= 20) {
+      detail = `Wind ${dir} at ${speedKmh} km/h — ideal conditions. Enough chop to mask topside noise, pushes baitfish and creates productive current seams.`;
+    } else if (speedMph <= 20) {
       scoreImpact = 0;
       icon = '🌬️';
       title = 'Moderate Wind';
-      detail = `Wind ${dir} at ${speed} mph — fishable but rough. Waves will concentrate baitfish on the lee side. Fish the downwind shore.`;
+      detail = `Wind ${dir} at ${speedKmh} km/h — fishable but rough. Waves will concentrate baitfish on the lee side. Fish the downwind shore.`;
     } else {
       scoreImpact = -15;
       icon = '⛈️';
       title = 'Strong Wind — Dangerous';
-      detail = `Wind ${dir} at ${speed} mph — heavy seas likely. Safety first! If going out, stay close to port and fish protected areas.`;
+      detail = `Wind ${dir} at ${speedKmh} km/h — heavy seas likely. Safety first! If going out, stay close to port and fish protected areas.`;
     }
 
     // Directional advice for Lake Ontario
     if (wind.direction != null) {
       const dirDeg = wind.direction;
-      // North wind pushes warm surface water south (toward shore) → potential upwelling offshore
       if (dirDeg >= 315 || dirDeg < 45) {
         detail += ' North wind can push warm surface water toward the south shore.';
       } else if (dirDeg >= 135 && dirDeg < 225) {
@@ -239,7 +240,7 @@ const FishingAI = (() => {
       }
     }
 
-    return { icon, title, detail, scoreImpact, factor: 'wind', value: speed };
+    return { icon, title, detail, scoreImpact, factor: 'wind', value: speedMph };
   }
 
   function analyzeTimeOfDay(solunar) {
@@ -312,32 +313,32 @@ const FishingAI = (() => {
       scoreImpact = 10;
       icon = '🌱';
       title = 'Spring — Brown Trout & Early Salmon';
-      detail = 'Spring fishing ON. Browns cruising the south shore. Chinook and Coho starting to push offshore as water warms. Stickbaits and spoons near shore.';
+      detail = 'Spring fishing ON. Browns cruising both shorelines. Chinook and Coho starting to push offshore as water warms. Stickbaits and spoons near shore. North shore piers and pier heads are hot in May.';
     } else if (month >= 6 && month <= 7) { // July-August
       scoreImpact = 15;
       icon = '☀️';
       title = 'Peak Summer — Open Water Salmon';
-      detail = 'Prime salmon season! Fish the thermocline — often 50-100ft down. Downriggers and copper/leadcore essential. Flasher-fly combos and spoons produce.';
+      detail = 'Prime salmon season! Fish the thermocline — often 15–30 m down. Downriggers and copper/leadcore essential. Flasher-fly combos and spoons produce. Work the mid-lake thermal axis north of Toronto and Rochester.';
     } else if (month === 8) { // September
       scoreImpact = 15;
       icon = '🍂';
       title = 'Fall Transition — Kings Staging';
-      detail = 'Chinook staging near river mouths! Look for concentrations off the Salmon River, Oswego, and Niagara bar. Fish are getting aggressive pre-spawn.';
+      detail = 'Chinook staging near river mouths! North shore: Credit River, Ganaraska, Cobourg. South shore: Salmon River, Oswego, Niagara bar. Fish are getting aggressive pre-spawn.';
     } else if (month >= 9 && month <= 10) { // October-November
       scoreImpact = 10;
       icon = '🍁';
       title = 'Fall Run — River Salmon + Steelhead';
-      detail = 'Kings running the rivers. Tributaries light up. Steelhead following. Brown trout nearshore bite heats up. Shore fishing can be phenomenal.';
+      detail = 'Kings running the rivers. Ontario tributaries (Credit, Ganaraska, Humber) light up. Steelhead following. Brown trout nearshore bite heats up on both shores.';
     } else if (month >= 11 || month <= 1) { // December-February
       scoreImpact = -10;
       icon = '❄️';
       title = 'Winter — Steelhead & Browns';
-      detail = 'Cold water season. Steelhead in tributaries, browns nearshore. Slow presentations, small profiles. Check ice conditions before launching.';
+      detail = 'Cold water season. Steelhead in tributaries (Credit, Ganaraska, Humber River), browns nearshore. Slow presentations, small profiles. Check ice conditions before launching.';
     } else { // March
       scoreImpact = 5;
       icon = '🌤️';
       title = 'Early Spring — Warming Up';
-      detail = 'Lake starting to turn over. Browns active nearshore. Watch for early warming near creek mouths — baitfish stack there.';
+      detail = 'Lake starting to turn over. Browns active nearshore. Watch for early warming near creek mouths — baitfish stack there. North shore warming pockets near harbour walls and industrial outflows.';
     }
 
     return { icon, title, detail, scoreImpact, factor: 'season' };
@@ -386,7 +387,7 @@ const FishingAI = (() => {
     } else if (month >= 3 && month <= 5) {
       // Spring
       detail = 'Stickbaits (Rapalas, Rogues) for browns nearshore. Spoons (silver/gold) for early salmon. ';
-      detail += 'Body baits trolled at 2-3 mph along the 15-30ft contour.';
+      detail += 'Body baits trolled at 3–4.5 km/h along the 5–9 m contour.';
     } else if (month >= 9 && month <= 10) {
       // Fall
       detail = 'Orange/chartreuse spoons and plugs for staging kings. Skein and egg sacs in tributaries. ';
@@ -405,15 +406,18 @@ const FishingAI = (() => {
     let detail = '';
 
     if (avgTemp == null) {
-      detail = 'No water temp data available. General rule: early season (spring) fish 15-40ft. Summer fish 40-100ft on the thermocline. Fall — follow the bait.';
-    } else if (avgTemp >= 48 && avgTemp <= 55) {
-      detail = `Surface temp is optimal (${avgTemp.toFixed(1)}°F) — salmon could be anywhere from 20-80ft. Start mid-column and adjust. Set a spread at staggered depths.`;
-    } else if (avgTemp > 60) {
-      detail = `Surface too warm (${avgTemp.toFixed(1)}°F). Salmon will be below the thermocline — typically 60-120ft. Use downriggers or copper line to get deep. Look for the temp break on your sonar.`;
-    } else if (avgTemp < 45) {
-      detail = `Water cold (${avgTemp.toFixed(1)}°F) — fish will be sluggish but may suspend shallow. Try 20-50ft range. Browns often cruise the 15-25ft contour in cold water.`;
+      detail = 'No water temp data available. General rule: early season (spring) fish 5–12 m. Summer fish 12–30 m on the thermocline. Fall — follow the bait.';
     } else {
-      detail = `Water at ${avgTemp.toFixed(1)}°F — transitional. Fish 30-70ft range, targeting structure and current seams. Adjust based on marks on sonar.`;
+      const tempC = ((avgTemp - 32) * 5 / 9).toFixed(1);
+      if (avgTemp >= 48 && avgTemp <= 55) {
+        detail = `Surface temp is optimal (${tempC}°C) — salmon could be anywhere from 6–25 m. Start mid-column and adjust. Set a spread at staggered depths.`;
+      } else if (avgTemp > 60) {
+        detail = `Surface too warm (${tempC}°C). Salmon will be below the thermocline — typically 18–37 m. Use downriggers or copper line to get deep. Look for the temp break on your sonar.`;
+      } else if (avgTemp < 45) {
+        detail = `Water cold (${tempC}°C) — fish will be sluggish but may suspend shallow. Try 6–15 m range. Browns often cruise the 5–8 m contour in cold water.`;
+      } else {
+        detail = `Water at ${tempC}°C — transitional. Fish 9–21 m range, targeting structure and current seams. Adjust based on marks on sonar.`;
+      }
     }
 
     return { title, detail };
@@ -423,9 +427,9 @@ const FishingAI = (() => {
     let title = '⚡ Technique & Speed';
     let detail = '';
 
-    const trollSpeed = avgTemp != null && avgTemp < 48 ? '1.5-2.2 mph' :
-                       avgTemp != null && avgTemp > 58 ? '2.5-3.5 mph' :
-                       '2.0-2.8 mph';
+    const trollSpeed = avgTemp != null && avgTemp < 48 ? '2.5–3.5 km/h' :
+                       avgTemp != null && avgTemp > 58 ? '4.0–5.5 km/h' :
+                       '3.2–4.5 km/h';
 
     detail = `Trolling speed: ${trollSpeed}. `;
 
@@ -484,8 +488,9 @@ const FishingAI = (() => {
 
     if (wind && wind.direction != null) {
       const dir = FishMap.degToCompass(wind.direction);
+      const speedKmh = Math.round(wind.speed * 1.60934);
       if (wind.speed > 8) {
-        parts.push(`Wind from the ${dir} at ${wind.speed} mph — baitfish will be pushed toward the downwind shore. Focus on that shoreline and adjacent structure.`);
+        parts.push(`Wind from the ${dir} at ${speedKmh} km/h — baitfish will be pushed toward the downwind shore. Focus on that shoreline and adjacent structure.`);
       }
     }
 
@@ -500,9 +505,11 @@ const FishingAI = (() => {
         const warmest = temps[0];
         const coldest = temps[temps.length - 1];
         const diff = warmest.temp - coldest.temp;
-
         if (diff > 3) {
-          parts.push(`Temperature spread of ${diff.toFixed(1)}°F across the lake! Warmest near ${warmest.name} (${warmest.temp}°F), coldest near ${coldest.name} (${coldest.temp}°F). The transition zone between these areas likely holds fish.`);
+          const wC = ((warmest.temp - 32) * 5 / 9).toFixed(1);
+          const cC = ((coldest.temp - 32) * 5 / 9).toFixed(1);
+          const diffC = ((diff) * 5 / 9).toFixed(1);
+          parts.push(`Temperature spread of ${diffC}°C across the lake! Warmest near ${warmest.name} (${wC}°C), coldest near ${coldest.name} (${cC}°C). The transition zone between these areas likely holds fish.`);
         }
       }
     }

@@ -5,9 +5,10 @@
    
    Data compiled from:
    - NYSDEC fishing reports & creel surveys
-   - Lake Ontario charter captain patterns
+   - OMNRF (Ontario Ministry of Natural Resources) reports
+   - Lake Ontario charter captain patterns (both shores)
    - Great Lakes Fishery Commission reports
-   - Tributary run timing data
+   - Tributary run timing data (US & Canadian tributaries)
    
    Each spot has lat/lon, species, seasonal intensity,
    and depth/technique tips.
@@ -192,8 +193,88 @@ const HotSpots = (() => {
       radius: 2000,
       species: ['Chinook', 'Coho', 'Brown Trout', 'Lake Trout'],
       months: { 0: 0.2, 1: 0.2, 2: 0.4, 3: 0.7, 4: 0.8, 5: 0.7, 6: 0.7, 7: 0.8, 8: 0.8, 9: 0.7, 10: 0.5, 11: 0.3 },
-      tip: 'Launch point for offshore salmon trolling. The 100-300 ft contour north of here is prime summer king water. Brown trout in spring along the shore break.',
-      depth: '40-150 ft, work the contours north'
+      tip: 'Launch point for offshore salmon trolling. The 30–90 m contour north of here is prime summer king water. Brown trout in spring along the shore break.',
+      depth: '12–45 m, work the contours north'
+    },
+
+    // ======== CANADIAN NORTH SHORE ========
+
+    // ---- Toronto (Port Credit / Outer Harbour) ----
+    {
+      id: 'toronto-waterfront',
+      name: 'Toronto Waterfront',
+      lat: 43.620, lon: -79.384,
+      radius: 3000,
+      species: ['Chinook', 'Coho', 'Brown Trout', 'Steelhead'],
+      months: { 0: 0.3, 1: 0.3, 2: 0.5, 3: 0.7, 4: 0.8, 5: 0.7, 6: 0.7, 7: 0.8, 8: 0.8, 9: 0.7, 10: 0.6, 11: 0.4 },
+      tip: 'Urban salmon fishery right off Toronto. Spring browns cruise the piers and breakwalls. Summer kings found north of the 20 m line. Steelhead staging in Humber and Don rivers fall–winter.',
+      depth: '10–50 m nearshore, deeper offshore'
+    },
+    // ---- Port Credit / Credit River ----
+    {
+      id: 'port-credit',
+      name: 'Port Credit / Credit River',
+      lat: 43.549, lon: -79.580,
+      radius: 2000,
+      species: ['Chinook', 'Coho', 'Steelhead', 'Brown Trout'],
+      months: { 0: 0.3, 1: 0.3, 2: 0.5, 3: 0.7, 4: 0.8, 5: 0.7, 6: 0.6, 7: 0.7, 8: 0.9, 9: 0.9, 10: 0.7, 11: 0.5 },
+      tip: 'Credit River is one of the top Ontario tributaries. Kings and Coho stage off the mouth Aug–Sep, run Oct. Steelhead through winter and spring. Browns along the pier heads.',
+      depth: '8–40 m offshore, river for tributary fishing'
+    },
+    // ---- Oakville / Bronte Creek ----
+    {
+      id: 'oakville-bronte',
+      name: 'Oakville / Bronte Creek',
+      lat: 43.490, lon: -79.700,
+      radius: 1800,
+      species: ['Chinook', 'Steelhead', 'Brown Trout'],
+      months: { 0: 0.3, 1: 0.3, 2: 0.5, 3: 0.7, 4: 0.7, 5: 0.6, 6: 0.5, 7: 0.6, 8: 0.8, 9: 0.9, 10: 0.7, 11: 0.4 },
+      tip: 'Bronte Creek draws strong fall Chinook and Coho runs. Spring steelhead fishery is excellent. Brown trout along the breakwall year-round.',
+      depth: '8–35 m nearshore'
+    },
+    // ---- Burlington / Hamilton Harbour ----
+    {
+      id: 'burlington-hamilton',
+      name: 'Burlington / Hamilton Harbour',
+      lat: 43.310, lon: -79.790,
+      radius: 2500,
+      species: ['Chinook', 'Coho', 'Steelhead', 'Lake Trout'],
+      months: { 0: 0.2, 1: 0.2, 2: 0.4, 3: 0.6, 4: 0.7, 5: 0.7, 6: 0.7, 7: 0.8, 8: 0.8, 9: 0.7, 10: 0.5, 11: 0.3 },
+      tip: 'Niagara Bar current sweeps baitfish eastward toward Burlington–Hamilton. Fish the drop-offs adjacent to the harbour entrance. Lake trout on deep structure year-round.',
+      depth: '20–100 m'
+    },
+    // ---- Whitby / Oshawa ----
+    {
+      id: 'whitby-oshawa',
+      name: 'Whitby / Oshawa Harbour',
+      lat: 43.840, lon: -78.910,
+      radius: 2200,
+      species: ['Chinook', 'Coho', 'Brown Trout', 'Steelhead'],
+      months: { 0: 0.2, 1: 0.2, 2: 0.4, 3: 0.6, 4: 0.7, 5: 0.7, 6: 0.7, 7: 0.8, 8: 0.9, 9: 0.8, 10: 0.6, 11: 0.3 },
+      tip: 'Consistent producers east of Toronto. Fish the mid-lake thermal axis north of Whitby in summer. Oshawa Harbour pier draws browns in spring. Ganaraska River (nearby) is a top steelhead river.',
+      depth: '15–70 m offshore'
+    },
+    // ---- Port Hope / Ganaraska River ----
+    {
+      id: 'port-hope',
+      name: 'Port Hope / Ganaraska River',
+      lat: 43.960, lon: -78.300,
+      radius: 2000,
+      species: ['Chinook', 'Coho', 'Steelhead', 'Brown Trout'],
+      months: { 0: 0.4, 1: 0.4, 2: 0.6, 3: 0.8, 4: 0.8, 5: 0.6, 6: 0.5, 7: 0.7, 8: 1.0, 9: 1.0, 10: 0.8, 11: 0.5 },
+      tip: 'The Ganaraska is one of Ontario’s premier salmon and steelhead rivers. Kings stack off the harbour mouth Aug–Sep. Phenomenal river fishing Oct–Nov for Chinook & Coho. Steelhead Nov through April.',
+      depth: '10–45 m offshore, river for runs'
+    },
+    // ---- Cobourg / Presquile ----
+    {
+      id: 'cobourg-presquile',
+      name: 'Cobourg / Presquile',
+      lat: 43.970, lon: -77.840,
+      radius: 2500,
+      species: ['Chinook', 'Coho', 'Brown Trout', 'Walleye'],
+      months: { 0: 0.2, 1: 0.2, 2: 0.3, 3: 0.6, 4: 0.7, 5: 0.7, 6: 0.7, 7: 0.8, 8: 0.9, 9: 0.8, 10: 0.5, 11: 0.2 },
+      tip: 'Presquile Bay and Point create structure that concentrates bait. Excellent brown trout spring fishery along the shoreline. Mid-summer kings staging on the thermal axis nearby.',
+      depth: '12–60 m'
     }
   ];
 
@@ -212,9 +293,9 @@ const HotSpots = (() => {
     return getActiveSpots(month).slice(0, n);
   }
 
-  // Get nearby hot spots for a given lat/lon (within radiusMiles)
-  function getNearby(lat, lon, month, radiusMiles = 15) {
-    const R = 3959; // Earth radius in miles
+  // Get nearby hot spots for a given lat/lon (within radiusKm)
+  function getNearby(lat, lon, month, radiusKm = 25) {
+    const R = 6371; // Earth radius in km
     return getActiveSpots(month)
       .map(s => {
         const dLat = (s.lat - lat) * Math.PI / 180;
@@ -225,7 +306,7 @@ const HotSpots = (() => {
         const dist = R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
         return { ...s, dist };
       })
-      .filter(s => s.dist <= radiusMiles)
+      .filter(s => s.dist <= radiusKm)
       .sort((a, b) => a.dist - b.dist);
   }
 
@@ -236,7 +317,7 @@ const HotSpots = (() => {
 
   // Get species active at this location/month
   function getSpeciesAtSpot(lat, lon, month) {
-    const nearby = getNearby(lat, lon, month, 5);
+    const nearby = getNearby(lat, lon, month, 8); // 8 km
     if (nearby.length === 0) return null;
     const speciesSet = new Set();
     nearby.forEach(s => s.species.forEach(sp => speciesSet.add(sp)));
