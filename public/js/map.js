@@ -7,8 +7,10 @@ const FishMap = (() => {
   let sstLayer;
   let bathyLayer;
   let buoyLayerGroup;
+  let hotspotLayerGroup;
   let buoyData = {};
   let activeBasemap = null;
+  let currentHotspotMonth = new Date().getMonth();
 
   const ESRI_BASE = 'https://services.arcgisonline.com/ArcGIS/rest/services';
 
@@ -66,6 +68,8 @@ const FishMap = (() => {
     map.getPane('bathyPane').style.zIndex = 300;       // above SST
     map.createPane('buoyPane');
     map.getPane('buoyPane').style.zIndex = 450;        // above everything
+    map.createPane('hotspotPane');
+    map.getPane('hotspotPane').style.zIndex = 400;     // above bathymetry, below buoys
 
     // Default basemap — satellite view
     setBasemap('satellite');
@@ -148,6 +152,9 @@ const FishMap = (() => {
     // Buoy layer group (markers get pane individually) — starts OFF
     buoyLayerGroup = L.layerGroup();
 
+    // Hot spots layer group — starts OFF
+    hotspotLayerGroup = L.layerGroup();
+
     // Overlay toggle buttons
     document.getElementById('layer-sst').addEventListener('click', (e) => {
       e.currentTarget.classList.toggle('active');
@@ -166,6 +173,15 @@ const FishMap = (() => {
     document.getElementById('layer-bathymetry').addEventListener('click', (e) => {
       e.currentTarget.classList.toggle('active');
       e.currentTarget.classList.contains('active') ? map.addLayer(bathyLayer) : map.removeLayer(bathyLayer);
+    });
+    document.getElementById('layer-hotspots').addEventListener('click', (e) => {
+      e.currentTarget.classList.toggle('active');
+      if (e.currentTarget.classList.contains('active')) {
+        renderHotSpots(currentHotspotMonth);
+        map.addLayer(hotspotLayerGroup);
+      } else {
+        map.removeLayer(hotspotLayerGroup);
+      }
     });
 
     // SST opacity slider
@@ -299,6 +315,21 @@ const FishMap = (() => {
       }
       rows.push(popupRow('Moon', `${sol.phaseEmoji} ${sol.phaseName}`));
       rows.push(popupRow('Solunar Rating', sol.fishingQuality));
+    }
+
+    // Nearby hot spots
+    if (typeof HotSpots !== 'undefined') {
+      const month = currentHotspotMonth;
+      const nearbySpots = HotSpots.getNearby(lat, lng, month, 10);
+      if (nearbySpots.length > 0) {
+        rows.push('<div class="popup-section">🔥 Nearby Hot Spots</div>');
+        nearbySpots.slice(0, 3).forEach(hs => {
+          const pct = Math.round(hs.intensity * 100);
+          const speciesBrief = hs.species.slice(0, 3).join(', ');
+          rows.push(popupRow(esc(hs.name), `${pct}% · ${hs.dist.toFixed(1)} mi`));
+          rows.push(`<div class="spot-tip" style="margin:2px 0 4px">${esc(speciesBrief)} — ${esc(hs.depth)}</div>`);
+        });
+      }
     }
 
     return rows.join('');
@@ -479,5 +510,78 @@ const FishMap = (() => {
     return map;
   }
 
-  return { init, loadBuoys, getBuoyData, getMap, getTempClass, degToCompass };
+  // ---- Hot Spots Heat Map Layer ----
+
+  function renderHotSpots(month) {
+    hotspotLayerGroup.clearLayers();
+    if (typeof HotSpots === 'undefined') return;
+
+    const spots = HotSpots.getActiveSpots(month);
+    const monthNames = ['January', 'February', 'March', 'April', 'May', 'June',
+      'July', 'August', 'September', 'October', 'November', 'December'];
+
+    spots.forEach(spot => {
+      const intensity = spot.intensity;
+      if (intensity <= 0) return;
+
+      // Color from green (low) to red (peak)
+      const r = Math.round(255 * Math.min(1, intensity * 2));
+      const g = Math.round(255 * Math.max(0, 1 - intensity));
+      const color = `rgb(${r}, ${g}, 40)`;
+      const fillOpacity = 0.12 + intensity * 0.28;
+
+      // Circle sized by radius from data
+      const circle = L.circle([spot.lat, spot.lon], {
+        radius: spot.radius,
+        color: color,
+        weight: 2,
+        opacity: 0.7,
+        fillColor: color,
+        fillOpacity: fillOpacity,
+        pane: 'hotspotPane'
+      });
+
+      // Label marker in center
+      const label = L.marker([spot.lat, spot.lon], {
+        icon: L.divIcon({
+          className: 'hotspot-label',
+          html: `<div class="hotspot-marker" style="border-color: ${esc(color)}">
+            <span class="hotspot-name">${esc(spot.name)}</span>
+            <span class="hotspot-intensity">${Math.round(intensity * 100)}%</span>
+          </div>`,
+          iconSize: [0, 0],
+          iconAnchor: [0, 0]
+        }),
+        pane: 'hotspotPane',
+        interactive: true
+      });
+
+      // Popup with spot details
+      const speciesList = spot.species.join(', ');
+      const popupHtml = `
+        <h4>🔥 ${esc(spot.name)}</h4>
+        ${popupRow('Activity', `${Math.round(intensity * 100)}% — ${intensity >= 0.8 ? 'Peak' : intensity >= 0.5 ? 'Good' : 'Moderate'}`)}
+        ${popupRow('Month', esc(monthNames[month]))}
+        ${popupRow('Species', esc(speciesList))}
+        ${popupRow('Depth', esc(spot.depth))}
+        <div class="spot-tip">${esc(spot.tip)}</div>
+      `;
+
+      label.bindPopup(popupHtml, { className: 'spot-popup', maxWidth: 280 });
+
+      hotspotLayerGroup.addLayer(circle);
+      hotspotLayerGroup.addLayer(label);
+    });
+  }
+
+  function updateHotSpots(month) {
+    currentHotspotMonth = month;
+    // Only re-render if layer is currently active
+    const btn = document.getElementById('layer-hotspots');
+    if (btn && btn.classList.contains('active')) {
+      renderHotSpots(month);
+    }
+  }
+
+  return { init, loadBuoys, getBuoyData, getMap, getTempClass, degToCompass, updateHotSpots };
 })();

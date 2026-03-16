@@ -23,9 +23,130 @@
       <h1>Nicky's Fish Finder</h1>
     </div>
     <div class="top-bar-right">
+      <button id="btn-help" class="icon-btn" title="Help">❓</button>
       <button id="btn-refresh" class="icon-btn" title="Refresh Data">🔄</button>
     </div>
   </header>
+
+  <!-- ============ Help Modal ============ -->
+  <div id="help-overlay" class="help-overlay hidden">
+    <div class="help-modal">
+      <div class="help-header">
+        <h2>🐟 Nicky's Fish Finder</h2>
+        <button id="help-close" class="help-close">&times;</button>
+      </div>
+      <div class="help-body">
+        <p class="help-intro">Your complete Lake Ontario fishing intelligence dashboard. Real-time conditions, forecasts, and expert analysis — all in one place.</p>
+
+        <div class="help-section">
+          <button class="help-toggle">📊 Weather &amp; Conditions Strip<span class="help-chevron">▶</span></button>
+          <div class="help-content">
+            <p>The bar at the top shows current conditions at a glance: air temperature, lake water temperature (averaged from NOAA buoys), wind speed and direction, barometric pressure, and moon phase. Data refreshes automatically every 15 minutes or tap 🔄 to refresh manually.</p>
+          </div>
+        </div>
+
+        <div class="help-section">
+          <button class="help-toggle">📅 7-Day Date Picker<span class="help-chevron">▶</span></button>
+          <div class="help-content">
+            <p>Tap any day in the date strip to see the fishing forecast for that day. Each button is color-coded from red (poor conditions) to green (great conditions) based on weather, solunar data, and seasonal patterns. The AI analysis, solunar info, and recommendations all update to reflect the selected day.</p>
+          </div>
+        </div>
+
+        <div class="help-section">
+          <button class="help-toggle">🗺️ Interactive Map<span class="help-chevron">▶</span></button>
+          <div class="help-content">
+            <p>An interactive map of Lake Ontario centered on the south shore fishing grounds. Tap anywhere on the lake to get a detailed <strong>Spot Report</strong> showing estimated water temperature, depth, nearest buoy readings, sun/moon times, solunar rating, and nearby seasonal hot spots.</p>
+            <p>Choose from 5 base maps: Topographic, Satellite, Ocean, NatGeo, and Dark mode.</p>
+          </div>
+        </div>
+
+        <div class="help-section">
+          <button class="help-toggle">🌡️ Map Overlays<span class="help-chevron">▶</span></button>
+          <div class="help-content">
+            <p>Toggle these layers from the "Tap for map layers" panel:</p>
+            <ul>
+              <li><strong>SST (Sea Surface Temperature)</strong> — Satellite thermal imagery from NOAA GLERL showing water temperature patterns. Look for sharp color transitions — those thermal breaks concentrate baitfish and salmon.</li>
+              <li><strong>Buoys</strong> — NOAA buoy stations on the lake with real-time water temp, wind, waves, and pressure. Tap a buoy marker for full details.</li>
+              <li><strong>Depth</strong> — Bathymetry contour layer showing underwater terrain and depth soundings.</li>
+              <li><strong>Hot Spots</strong> — Seasonal fishing hot spots based on historical patterns. Circles are color-coded from green (moderate) to red (peak activity). Intensity percentages update based on the selected date's month.</li>
+            </ul>
+          </div>
+        </div>
+
+        <div class="help-section">
+          <button class="help-toggle">🎯 Fish Intel (AI Analysis)<span class="help-chevron">▶</span></button>
+          <div class="help-content">
+            <p>A rule-based expert system that scores current or forecasted conditions on a 0–100 scale. It evaluates:</p>
+            <ul>
+              <li><strong>Water Temperature</strong> — Optimal Chinook range is 48–55°F. The system rates how close conditions are to the sweet spot.</li>
+              <li><strong>Barometric Pressure</strong> — High/stable pressure is good; rapidly falling pressure before a front can trigger feeding frenzies.</li>
+              <li><strong>Wind</strong> — Light-moderate wind (5–12 mph) is ideal. Direction affects baitfish distribution and upwelling.</li>
+              <li><strong>Time of Day</strong> — Dawn and dusk are prime feeding windows.</li>
+              <li><strong>Moon Phase (Solunar)</strong> — New and full moons correlate with increased fish activity.</li>
+              <li><strong>Season</strong> — Analysis adjusts for spring browns, summer open-water kings, fall staging, and winter steelhead.</li>
+            </ul>
+            <p>You also get lure recommendations, depth strategy, trolling speed tips, best time windows, and where to focus on the lake.</p>
+          </div>
+        </div>
+
+        <div class="help-section">
+          <button class="help-toggle">🌤️ Weather Tab<span class="help-chevron">▶</span></button>
+          <div class="help-content">
+            <p>Detailed current conditions from the nearest NWS station: temperature, wind, pressure, humidity, visibility, and dew point. Below that, the NWS 7-day forecast with temperatures and conditions for each period. When viewing a future date, the selected day's detailed forecast appears at the top.</p>
+          </div>
+        </div>
+
+        <div class="help-section">
+          <button class="help-toggle">🌊 Buoys Tab<span class="help-chevron">▶</span></button>
+          <div class="help-content">
+            <p>Real-time readings from NOAA NDBC buoy stations across Lake Ontario. Each card shows water temperature, air temperature, wind speed and direction, barometric pressure, wave height, and the last update timestamp. Data is proxied through the server to avoid browser restrictions.</p>
+          </div>
+        </div>
+
+        <div class="help-section">
+          <button class="help-toggle">📍 Spot Reports (Tap on Lake)<span class="help-chevron">▶</span></button>
+          <div class="help-content">
+            <p>Tap anywhere on the lake to get a pinpoint report for that location. The popup shows:</p>
+            <ul>
+              <li><strong>Depth</strong> — Bottom depth from NOAA ETOPO bathymetry data, with fishing tips for that depth range.</li>
+              <li><strong>Estimated Water Temp</strong> — Interpolated from nearby buoy readings using inverse-distance weighting.</li>
+              <li><strong>Nearest Buoys</strong> — Distance and current readings from the 3 closest stations.</li>
+              <li><strong>Sun &amp; Moon</strong> — Sunrise/sunset times, moon phase, and solunar fishing rating.</li>
+              <li><strong>Nearby Hot Spots</strong> — Seasonal fishing zones within 10 miles, with species and depth info.</li>
+            </ul>
+          </div>
+        </div>
+
+        <div class="help-section">
+          <button class="help-toggle">🔥 Seasonal Hot Spots<span class="help-chevron">▶</span></button>
+          <div class="help-content">
+            <p>16 curated fishing zones across Lake Ontario, each with per-month intensity ratings based on historical catch patterns, NYSDEC reports, and charter captain knowledge. Key spots include:</p>
+            <ul>
+              <li>Salmon River Mouth — Premier fall king salmon destination</li>
+              <li>Niagara Bar — Year-round baitfish magnet</li>
+              <li>Wilson/Olcott — Gateway to the 30-mile bank summer trolling</li>
+              <li>Mid-Lake Thermal Zone — Summer salmon highway</li>
+            </ul>
+            <p>Toggle the Hot Spots overlay on the map to see all zones. The intensity adjusts when you switch dates to a different month.</p>
+          </div>
+        </div>
+
+        <div class="help-section">
+          <button class="help-toggle">⚙️ Data Sources<span class="help-chevron">▶</span></button>
+          <div class="help-content">
+            <ul>
+              <li><strong>Weather</strong> — NOAA National Weather Service API (free, no key required)</li>
+              <li><strong>Buoys</strong> — NOAA NDBC real-time station observations</li>
+              <li><strong>Water Temp Imagery</strong> — NOAA GLERL Great Lakes Surface Environmental Analysis + NASA GIBS fallback</li>
+              <li><strong>Depth</strong> — NOAA NCEI ETOPO 2022 bathymetry via ArcGIS ImageServer</li>
+              <li><strong>Solunar</strong> — Jean Meeus astronomical algorithms (calculated locally, no API)</li>
+              <li><strong>Maps</strong> — Esri ArcGIS basemaps, Leaflet.js, CARTO dark tiles</li>
+            </ul>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
 
   <!-- ============ Weather Strip ============ -->
   <div id="weather-strip">
@@ -49,6 +170,11 @@
       <span class="ws-label">Moon</span>
       <span class="ws-value" id="ws-moon-val">--</span>
     </div>
+  </div>
+
+  <!-- ============ Date Picker Strip ============ -->
+  <div id="date-strip">
+    <div id="date-scroll"></div>
   </div>
 
   <!-- ============ Map ============ -->
@@ -76,6 +202,7 @@
           <button class="overlay-btn" id="layer-sst" title="Sea Surface Temperature">🌡️<span>SST</span></button>
           <button class="overlay-btn" id="layer-buoys" title="Buoy Stations">📡<span>Buoys</span></button>
           <button class="overlay-btn" id="layer-bathymetry" title="Depth Contours">⚓<span>Depth</span></button>
+          <button class="overlay-btn" id="layer-hotspots" title="Seasonal Hot Spots">🔥<span>Hot Spots</span></button>
         </div>
       </div>
       <div class="sst-legend" id="sst-legend">
@@ -114,7 +241,7 @@
       <!-- AI Tab -->
       <div id="tab-ai" class="tab-pane active">
         <div id="ai-summary" class="intel-card">
-          <h3>🐟 Today's Assessment</h3>
+          <h3 id="ai-assessment-title">🐟 Today's Assessment</h3>
           <div id="ai-rating" class="rating">
             <span class="rating-label">Fishing Conditions:</span>
             <span class="rating-value" id="ai-rating-val">Loading...</span>
@@ -161,6 +288,7 @@
   <script src="js/solunar.js"></script>
   <script src="js/weather.js"></script>
   <script src="js/fishing-ai.js"></script>
+  <script src="js/hotspots.js"></script>
   <script src="js/map.js"></script>
   <script src="js/app.js"></script>
 </body>

@@ -129,7 +129,7 @@ html, body {
 /* ============ Map ============ */
 #map {
   position: fixed;
-  top: 120px; /* 48 top-bar + 36 weather-strip + 36 layer-peek */
+  top: 160px; /* 48 top-bar + 36 weather-strip + 40 date-strip + 36 layer-peek */
   left: 0;
   right: 0;
   bottom: 52px; /* bottom panel peek height */
@@ -275,7 +275,7 @@ html, body {
 /* ============ Layer Panel (top slide-down) ============ */
 .top-panel {
   position: fixed;
-  top: 84px;
+  top: 124px;
   left: 0;
   right: 0;
   z-index: 900;
@@ -751,6 +751,148 @@ html, body {
 .temp-warm { color: #ffc107; }
 .temp-hot { color: #ff5252; }
 
+/* ============ Date Picker Strip ============ */
+#date-strip {
+  position: fixed;
+  top: 84px; /* below weather strip */
+  left: 0;
+  right: 0;
+  z-index: 1000;
+  height: 40px;
+  background: rgba(10, 22, 40, 0.95);
+  backdrop-filter: blur(10px);
+  border-bottom: 1px solid var(--border);
+  overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
+  scrollbar-width: none;
+}
+
+#date-strip::-webkit-scrollbar {
+  display: none;
+}
+
+#date-scroll {
+  display: flex;
+  align-items: center;
+  height: 100%;
+  padding: 0 6px;
+  gap: 4px;
+  min-width: min-content;
+}
+
+.date-btn {
+  flex-shrink: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 3px 12px;
+  background: rgba(255,255,255,0.05);
+  border: 1.5px solid transparent;
+  border-radius: 8px;
+  cursor: pointer;
+  transition: border-color 0.2s, background 0.2s;
+  color: var(--text-primary);
+  line-height: 1;
+  height: 34px;
+}
+
+.date-btn .date-day {
+  font-size: 10px;
+  font-weight: 600;
+  color: var(--text-secondary);
+  text-transform: uppercase;
+  letter-spacing: 0.3px;
+}
+
+.date-btn .date-num {
+  font-size: 11px;
+  font-weight: 500;
+  color: var(--text-primary);
+}
+
+/* Date button fishing-quality color levels (1=poor → 5=great) */
+.date-btn.date-lvl-1 { background: rgba(255, 60, 60, 0.22); }
+.date-btn.date-lvl-1 .date-day { color: #ff5252; }
+.date-btn.date-lvl-2 { background: rgba(255, 152, 0, 0.22); }
+.date-btn.date-lvl-2 .date-day { color: #ff9800; }
+.date-btn.date-lvl-3 { background: rgba(255, 215, 0, 0.20); }
+.date-btn.date-lvl-3 .date-day { color: #ffd740; }
+.date-btn.date-lvl-4 { background: rgba(140, 220, 60, 0.20); }
+.date-btn.date-lvl-4 .date-day { color: #8bc34a; }
+.date-btn.date-lvl-5 { background: rgba(0, 230, 118, 0.22); }
+.date-btn.date-lvl-5 .date-day { color: #00e676; }
+
+.date-btn.active {
+  border-color: var(--accent);
+}
+
+.date-btn.active .date-day {
+  color: var(--accent);
+}
+
+.date-btn:active {
+  opacity: 0.8;
+}
+
+/* ============ Hot Spots Layer ============ */
+.hotspot-label {
+  background: none !important;
+  border: none !important;
+}
+
+.hotspot-marker {
+  background: rgba(10, 22, 40, 0.85);
+  border: 1.5px solid #ff6600;
+  border-radius: 8px;
+  padding: 3px 8px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  white-space: nowrap;
+  backdrop-filter: blur(4px);
+  transform: translate(-50%, -50%);
+  pointer-events: auto;
+}
+
+.hotspot-name {
+  font-size: 10px;
+  font-weight: 600;
+  color: #fff;
+  line-height: 1.2;
+}
+
+.hotspot-intensity {
+  font-size: 9px;
+  font-weight: 700;
+  color: #ff9900;
+  line-height: 1.2;
+}
+
+/* ============ Forecast Detail Card ============ */
+.forecast-detail-card {
+  background: rgba(0, 188, 212, 0.08);
+  border: 1px solid var(--accent);
+  border-radius: 10px;
+  padding: 10px 12px;
+  margin-bottom: 12px;
+}
+
+.forecast-detail-period {
+  font-size: 13px;
+  color: var(--text-secondary);
+  line-height: 1.5;
+  margin-bottom: 6px;
+}
+
+.forecast-detail-period:last-child {
+  margin-bottom: 0;
+}
+
+.forecast-detail-period strong {
+  color: var(--accent);
+}
+
 /* ============ Loading / Error States ============ */
 .loading-spinner {
   display: inline-block;
@@ -770,6 +912,149 @@ html, body {
   color: var(--danger);
   font-size: 13px;
   padding: 8px;
+}
+
+/* ============ Help Modal ============ */
+.help-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 2000;
+  background: rgba(0, 0, 0, 0.7);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 16px;
+  backdrop-filter: blur(4px);
+}
+
+.help-overlay.hidden {
+  display: none;
+}
+
+.help-modal {
+  background: var(--bg-panel);
+  border: 1px solid var(--border);
+  border-radius: 16px;
+  width: 100%;
+  max-width: 520px;
+  max-height: 85vh;
+  display: flex;
+  flex-direction: column;
+  box-shadow: 0 8px 40px rgba(0, 0, 0, 0.6);
+}
+
+.help-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 16px 18px 12px;
+  border-bottom: 1px solid var(--border);
+  flex-shrink: 0;
+}
+
+.help-header h2 {
+  font-size: 18px;
+  color: var(--accent);
+  font-weight: 700;
+}
+
+.help-close {
+  background: none;
+  border: none;
+  color: var(--text-secondary);
+  font-size: 28px;
+  cursor: pointer;
+  padding: 0 4px;
+  line-height: 1;
+}
+
+.help-close:hover {
+  color: var(--text-primary);
+}
+
+.help-body {
+  overflow-y: auto;
+  padding: 14px 18px 20px;
+  -webkit-overflow-scrolling: touch;
+}
+
+.help-intro {
+  font-size: 14px;
+  color: var(--text-secondary);
+  line-height: 1.5;
+  margin-bottom: 14px;
+}
+
+.help-section {
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  margin-bottom: 6px;
+  overflow: hidden;
+}
+
+.help-toggle {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  width: 100%;
+  background: var(--bg-card);
+  border: none;
+  color: var(--text-primary);
+  font-size: 14px;
+  font-weight: 600;
+  padding: 12px 14px;
+  cursor: pointer;
+  text-align: left;
+}
+
+.help-toggle:active {
+  background: rgba(0, 188, 212, 0.1);
+}
+
+.help-chevron {
+  font-size: 10px;
+  color: var(--text-muted);
+  transition: transform 0.25s;
+}
+
+.help-section.open .help-chevron {
+  transform: rotate(90deg);
+}
+
+.help-content {
+  display: none;
+  padding: 10px 14px 14px;
+  border-top: 1px solid var(--border);
+}
+
+.help-section.open .help-content {
+  display: block;
+}
+
+.help-content p {
+  font-size: 13px;
+  color: var(--text-secondary);
+  line-height: 1.55;
+  margin-bottom: 8px;
+}
+
+.help-content p:last-child {
+  margin-bottom: 0;
+}
+
+.help-content ul {
+  margin: 6px 0 8px 18px;
+  font-size: 13px;
+  color: var(--text-secondary);
+  line-height: 1.55;
+}
+
+.help-content li {
+  margin-bottom: 5px;
+}
+
+.help-content strong {
+  color: var(--text-primary);
 }
 
 /* ============ Responsive ============ */

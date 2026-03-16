@@ -11,6 +11,7 @@
   let solunarData = null;
   let aiResult = null;
   let panelExpanded = false;
+  let selectedDate = new Date(); // currently selected forecast date
 
   // ---- Init ----
   document.addEventListener('DOMContentLoaded', async () => {
@@ -35,6 +36,9 @@
   // ---- UI Setup ----
 
   function initUI() {
+    // Date picker strip
+    buildDateStrip();
+
     // Bottom panel toggle
     const handle = document.getElementById('panel-handle');
     handle.addEventListener('click', togglePanel);
@@ -71,6 +75,143 @@
     document.getElementById('btn-refresh').addEventListener('click', () => {
       refreshAllData();
     });
+
+    // Help modal
+    const helpOverlay = document.getElementById('help-overlay');
+    document.getElementById('btn-help').addEventListener('click', () => {
+      helpOverlay.classList.remove('hidden');
+    });
+    document.getElementById('help-close').addEventListener('click', () => {
+      helpOverlay.classList.add('hidden');
+    });
+    helpOverlay.addEventListener('click', (e) => {
+      if (e.target === helpOverlay) helpOverlay.classList.add('hidden');
+    });
+    document.querySelectorAll('.help-toggle').forEach(btn => {
+      btn.addEventListener('click', () => {
+        const section = btn.parentElement;
+        section.classList.toggle('open');
+      });
+    });
+  }
+
+  function buildDateStrip() {
+    const container = document.getElementById('date-scroll');
+    container.innerHTML = '';
+    const dayNames = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
+    const monthNames = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+
+    for (let i = 0; i < 7; i++) {
+      const d = new Date();
+      d.setDate(d.getDate() + i);
+      const btn = document.createElement('button');
+      btn.className = 'date-btn' + (i === 0 ? ' active' : '');
+      btn.dataset.offset = i;
+      const label = i === 0 ? 'Today' : dayNames[d.getDay()];
+      btn.innerHTML = `<span class="date-day">${sanitize(label)}</span><span class="date-num">${monthNames[d.getMonth()]} ${d.getDate()}</span>`;
+      btn.addEventListener('click', () => selectDate(i));
+      container.appendChild(btn);
+    }
+  }
+
+  function selectDate(dayOffset) {
+    // Update active button
+    document.querySelectorAll('.date-btn').forEach(b => b.classList.remove('active'));
+    document.querySelector(`.date-btn[data-offset="${dayOffset}"]`).classList.add('active');
+
+    // Set the selected date
+    selectedDate = new Date();
+    selectedDate.setDate(selectedDate.getDate() + dayOffset);
+
+    // Update assessment title
+    const title = document.getElementById('ai-assessment-title');
+    if (dayOffset === 0) {
+      title.textContent = '🐟 Today\'s Assessment';
+    } else {
+      const dayNames = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
+      title.textContent = `🐟 ${dayNames[selectedDate.getDay()]} Forecast`;
+    }
+
+    // Recalculate solunar for selected date
+    solunarData = Solunar.getInfo(selectedDate);
+    updateMoonStrip(solunarData);
+
+    // Build forecast weather conditions for the selected day
+    const forecastConditions = getForecastForDate(dayOffset);
+
+    // Re-run AI with forecast data
+    runAI(dayOffset, forecastConditions);
+
+    // Update weather tab to highlight selected day
+    renderWeatherTab(weatherData, dayOffset);
+
+    // Update hot spots layer if active
+    if (typeof FishMap !== 'undefined' && FishMap.updateHotSpots) {
+      FishMap.updateHotSpots(selectedDate.getMonth());
+    }
+  }
+
+  function getForecastForDate(dayOffset) {
+    if (dayOffset === 0 || !weatherData?.forecast) return null;
+
+    // NWS forecast periods: "Monday", "Monday Night", "Tuesday", etc.
+    // Find the daytime period for the target date
+    const target = new Date();
+    target.setDate(target.getDate() + dayOffset);
+    const dayNames = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
+    const targetDayName = dayNames[target.getDay()];
+
+    // Search forecast periods for this day name (daytime period)
+    const period = weatherData.forecast.find(p =>
+      p.name === targetDayName && p.isDaytime !== false
+    );
+
+    if (!period) return null;
+
+    // Build a pseudo-conditions object from forecast data
+    const windMatch = period.windSpeed ? period.windSpeed.match(/(\d+)/) : null;
+    const windSpeed = windMatch ? parseInt(windMatch[1]) : null;
+
+    return {
+      tempF: period.tempF,
+      description: period.shortForecast,
+      windSpeedMph: windSpeed,
+      windDirectionText: period.windDirection || null,
+      forecastDetail: period.detailedForecast,
+      isForecast: true
+    };
+  }
+
+  function scoreDateButtons() {
+    for (let i = 0; i < 7; i++) {
+      const d = new Date();
+      d.setDate(d.getDate() + i);
+
+      const sol = Solunar.getInfo(d);
+      const fc = i === 0 ? weatherData?.currentConditions : getForecastForDate(i);
+
+      const result = FishingAI.analyze({
+        buoys: i === 0 ? buoyData : null,
+        weather: fc,
+        solunar: sol
+      });
+
+      const btn = document.querySelector(`.date-btn[data-offset="${i}"]`);
+      if (!btn) continue;
+
+      // Remove old level classes
+      btn.classList.remove('date-lvl-1', 'date-lvl-2', 'date-lvl-3', 'date-lvl-4', 'date-lvl-5');
+
+      // 5 levels: 1=poor(red) 2=below-avg(orange) 3=fair(yellow) 4=good(yellow-green) 5=great(green)
+      let lvl;
+      if (result.score >= 70) lvl = 5;
+      else if (result.score >= 55) lvl = 4;
+      else if (result.score >= 40) lvl = 3;
+      else if (result.score >= 25) lvl = 2;
+      else lvl = 1;
+
+      btn.classList.add(`date-lvl-${lvl}`);
+    }
   }
 
   function togglePanel() {
@@ -131,6 +272,9 @@
 
     // Run AI analysis
     runAI();
+
+    // Color-code date buttons by fishing score
+    scoreDateButtons();
   }
 
   // ---- Weather Strip (top bar) ----
@@ -194,10 +338,14 @@
 
   // ---- AI Tab ----
 
-  function runAI() {
+  function runAI(dayOffset = 0, forecastConditions = null) {
+    const weatherForAI = (dayOffset === 0 || !forecastConditions)
+      ? weatherData?.currentConditions
+      : forecastConditions;
+
     aiResult = FishingAI.analyze({
-      buoys: buoyData,
-      weather: weatherData?.currentConditions,
+      buoys: dayOffset === 0 ? buoyData : null, // buoy data only valid for today
+      weather: weatherForAI,
       solunar: solunarData
     });
 
@@ -230,7 +378,7 @@
 
   // ---- Weather Tab ----
 
-  function renderWeatherTab(data) {
+  function renderWeatherTab(data, dayOffset = 0) {
     const grid = document.getElementById('weather-grid');
     const conditions = data?.currentConditions;
 
@@ -265,6 +413,28 @@
     const forecastEl = document.getElementById('forecast-list');
     forecastEl.innerHTML = '';
     if (data?.forecast) {
+      // For future dates, show the selected day's detail at top
+      if (dayOffset > 0) {
+        const targetDay = new Date();
+        targetDay.setDate(targetDay.getDate() + dayOffset);
+        const dayNames = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
+        const targetDayName = dayNames[targetDay.getDay()];
+
+        const matchingPeriods = data.forecast.filter(p =>
+          p.name === targetDayName || p.name === targetDayName + ' Night'
+        );
+        if (matchingPeriods.length > 0) {
+          const detail = document.createElement('div');
+          detail.className = 'forecast-detail-card';
+          detail.innerHTML = matchingPeriods.map(p =>
+            `<div class="forecast-detail-period">
+              <strong>${sanitize(p.name)}</strong>: ${sanitize(p.detailedForecast)}
+            </div>`
+          ).join('');
+          forecastEl.appendChild(detail);
+        }
+      }
+
       data.forecast.slice(0, 8).forEach(period => {
         const item = document.createElement('div');
         item.className = 'forecast-item';

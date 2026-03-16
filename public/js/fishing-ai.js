@@ -18,6 +18,7 @@ const FishingAI = (() => {
   // Analyze all available data and produce recommendations
   function analyze(data) {
     const { buoys, weather, solunar } = data;
+    const analysisDate = solunar?.sunTimes?.sunrise || new Date();
 
     const factors = [];
     let overallScore = 50; // 0-100 baseline
@@ -60,7 +61,7 @@ const FishingAI = (() => {
     }
 
     // ---- SEASON ----
-    const seasonAnalysis = analyzeSeason();
+    const seasonAnalysis = analyzeSeason(analysisDate);
     factors.push(seasonAnalysis);
     overallScore += seasonAnalysis.scoreImpact;
 
@@ -69,7 +70,7 @@ const FishingAI = (() => {
 
     // Generate recommendations
     const recommendations = generateRecommendations(waterTemps, pressure, wind, solunar, seasonAnalysis);
-    const spotAdvice = generateSpotAdvice(waterTemps, wind, buoys);
+    const spotAdvice = generateSpotAdvice(waterTemps, wind, buoys, analysisDate);
 
     return {
       score: Math.round(overallScore),
@@ -302,8 +303,8 @@ const FishingAI = (() => {
     return { icon, title, detail, scoreImpact, factor: 'moon' };
   }
 
-  function analyzeSeason() {
-    const month = new Date().getMonth(); // 0-indexed
+  function analyzeSeason(date) {
+    const month = (date || new Date()).getMonth(); // 0-indexed
     let scoreImpact = 0;
     let icon, title, detail;
 
@@ -466,7 +467,7 @@ const FishingAI = (() => {
 
   // ---- Spot Advice ----
 
-  function generateSpotAdvice(waterTemps, wind, buoys) {
+  function generateSpotAdvice(waterTemps, wind, buoys, analysisDate) {
     const parts = [];
 
     if (waterTemps.length > 0) {
@@ -507,6 +508,18 @@ const FishingAI = (() => {
     }
 
     parts.push('Toggle the SST layer on the map to see thermal imagery. Areas where colors change rapidly indicate thermal breaks — these are your high-probability zones.');
+
+    // Seasonal hot spots
+    if (typeof HotSpots !== 'undefined') {
+      const month = (analysisDate || new Date()).getMonth();
+      const topSpots = HotSpots.getTopSpots(month, 3);
+      if (topSpots.length > 0) {
+        const spotList = topSpots.map(s =>
+          `${s.name} (${Math.round(s.intensity * 100)}% — ${s.species.slice(0, 2).join(', ')})`
+        ).join('; ');
+        parts.push(`🔥 Top hot spots this month: ${spotList}. Toggle the Hot Spots layer on the map to see all seasonal zones.`);
+      }
+    }
 
     return parts.join('\n\n');
   }
