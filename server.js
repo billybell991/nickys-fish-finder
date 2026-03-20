@@ -4,6 +4,9 @@ const path = require('path');
 const app = express();
 const PORT = process.env.PORT || 3000;
 
+// Parse JSON request bodies
+app.use(express.json());
+
 // Serve static frontend (no-cache for dev)
 app.use((req, res, next) => {
   if (req.path.match(/\.(js|css|html)$/)) {
@@ -248,6 +251,63 @@ app.get('/api/depth', async (req, res) => {
     res.json({ depthM: Math.round(depthM), depthFt: Math.round(depthFt), onLand: false });
   } catch (err) {
     res.status(502).json({ error: 'Depth lookup failed', detail: err.message });
+  }
+});
+
+// --------------- Gemini Chat Proxy ---------------
+// API key lives server-side in GEMINI_API_KEY env var — never exposed to the client
+// Set it in your Render dashboard (Environment → Add Environment Variable)
+// or locally in a .env file (add .env to .gitignore)
+
+const GEMINI_CHAT_URL = 'https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent';
+
+app.post('/api/chat', async (req, res) => {
+  const apiKey = process.env.GEMINI_API_KEY;
+  if (!apiKey) {
+    return res.status(503).json({ error: 'Chat service not configured. Set GEMINI_API_KEY on the server.' });
+  }
+
+  const { messages, systemPrompt } = req.body;
+
+  // Validate messages array
+  if (!Array.isArray(messages) || messages.length === 0 || messages.length > 20) {
+    return res.status(400).json({ error: 'Invalid messages array.' });
+  }
+  for (const msg of messages) {
+    if (!['user', 'model'].includes(msg.role)) return res.status(400).json({ error: 'Invalid message role.' });
+    if (!Array.isArray(msg.parts) || typeof msg.parts[0]?.text !== 'string') return res.status(400).json({ error: 'Invalid message parts.' });
+    if (msg.parts[0].text.length > 4000) return res.status(400).json({ error: 'Message too long.' });
+  }
+  if (systemPrompt !== undefined && (typeof systemPrompt !== 'string' || systemPrompt.length > 12000)) {
+    return res.status(400).json({ error: 'Invalid system prompt.' });
+  }
+
+  const body = {
+    contents: messages,
+    generationConfig: { temperature: 0.85, maxOutputTokens: 1024 }
+  };
+  if (systemPrompt) {
+    body.systemInstruction = { parts: [{ text: systemPrompt }] };
+  }
+
+  try {
+    const response = await fetch(`${GEMINI_CHAT_URL}?key=${apiKey}`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(body),
+      signal: AbortSignal.timeout(20000)
+    });
+    const data = await response.json();
+    if (!response.ok) {
+      const msg = data?.error?.message || `Gemini API error ${response.status}`;
+      return res.status(502).json({ error: msg });
+    }
+    const text = data?.candidates?.[0]?.content?.parts?.[0]?.text;
+    if (!text) throw new Error('Empty response from Gemini.');
+    res.json({ text });
+  } catch (err) {
+    if (err.name === 'TimeoutError') return res.status(504).json({ error: 'Gemini API timed out.' });
+    res.status(502).json({ error: 'Chat service error.', detail: err.message });
   }
 });
 

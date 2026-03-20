@@ -11,6 +11,7 @@ const FishMap = (() => {
   let buoyData = {};
   let activeBasemap = null;
   let currentHotspotMonth = new Date().getMonth();
+  let userLocationMarker = null;
 
   const ESRI_BASE = 'https://services.arcgisonline.com/ArcGIS/rest/services';
 
@@ -195,6 +196,9 @@ const FishMap = (() => {
       });
     }
 
+    // Wire up heart/favorite buttons in any popup that opens
+    map.on('popupopen', (e) => setTimeout(() => attachFavButtons(e.popup), 50));
+
     // Tap-on-lake → spot report popup (async for depth fetch)
     map.on('click', async (e) => {
       const { lat, lng } = e.latlng;
@@ -213,6 +217,7 @@ const FishMap = (() => {
         const depthData = await resp.json();
         if (popup.isOpen()) {
           popup.setContent(buildSpotPopup(lat, lng, depthData));
+          attachFavButtons(popup);
         }
       } catch (err) {
         // Depth unavailable — popup already shows without it
@@ -220,6 +225,83 @@ const FishMap = (() => {
     });
 
     return map;
+  }
+
+  // ---- Favorite Spot Heart Buttons ----
+
+  function attachFavButtons(popup) {
+    const el = popup.getElement();
+    if (!el) return;
+    el.querySelectorAll('.fav-btn').forEach(btn => {
+      // Clone to remove any stale listeners from previous content renders
+      const fresh = btn.cloneNode(true);
+      btn.replaceWith(fresh);
+      fresh.addEventListener('click', () => {
+        if (typeof FishFavorites === 'undefined') return;
+        const lat = parseFloat(fresh.dataset.lat);
+        const lng = parseFloat(fresh.dataset.lng);
+        const depthM  = fresh.dataset.depthM  ? parseFloat(fresh.dataset.depthM)  : null;
+        const name    = fresh.dataset.name    || null;
+        const added = FishFavorites.toggleFavorite(lat, lng, { depthM, name });
+        fresh.textContent = added ? '\u2764\uFE0F Saved!' : '\uD83E\uDD0D Save Spot';
+        fresh.classList.toggle('favorited', added);
+        window.dispatchEvent(new CustomEvent('favorites-changed'));
+      });
+    });
+  }
+
+  // ---- User Location ----
+
+  function requestUserLocation() {
+    if (!navigator.geolocation) {
+      console.warn('Geolocation is not supported by this browser.');
+      return;
+    }
+    navigator.geolocation.getCurrentPosition(
+      ({ coords }) => showUserLocationMarker(coords.latitude, coords.longitude),
+      (err)       => console.warn('Location unavailable:', err.message),
+      { timeout: 10000, maximumAge: 60000 }
+    );
+  }
+
+  function showUserLocationMarker(lat, lng) {
+    if (userLocationMarker) map.removeLayer(userLocationMarker);
+    const icon = L.divIcon({
+      className: 'user-location-marker',
+      html: '<div class="user-loc-pulse"></div><div class="user-loc-dot"></div>',
+      iconSize: [20, 20],
+      iconAnchor: [10, 10]
+    });
+    userLocationMarker = L.marker([lat, lng], { icon, zIndexOffset: 1000 });
+    const popupHtml =
+      '<div style="text-align:center;padding:4px">\uD83D\uDCCD <strong>Your Location</strong><br>' +
+      '<small>' + lat.toFixed(4) + '\xB0N, ' + Math.abs(lng).toFixed(4) + '\xB0W</small></div>';
+    userLocationMarker.bindPopup(popupHtml, { maxWidth: 160 });
+    userLocationMarker.addTo(map);
+    // Pan to user if they are within the Lake Ontario region
+    if (lat >= 42.5 && lat <= 44.8 && lng >= -80.5 && lng <= -75.0) {
+      map.setView([lat, lng], Math.max(map.getZoom(), 10));
+    }
+  }
+
+  // ---- Show Spot from Favorites ----
+
+  function showSpotAt(lat, lng) {
+    if (!map) return;
+    map.setView([lat, lng], Math.max(map.getZoom(), 10));
+    const popup = L.popup({ className: 'spot-popup', maxWidth: 280 })
+      .setLatLng([lat, lng])
+      .setContent(buildSpotPopup(lat, lng, null))
+      .openOn(map);
+    fetch(`/api/depth?lat=${lat.toFixed(5)}&lon=${lng.toFixed(5)}`)
+      .then(r => r.ok ? r.json() : null)
+      .then(depthData => {
+        if (depthData && popup.isOpen()) {
+          popup.setContent(buildSpotPopup(lat, lng, depthData));
+          attachFavButtons(popup);
+        }
+      })
+      .catch(() => {});
   }
 
   // ---- Spot Report (tap on lake) ----
@@ -340,7 +422,20 @@ const FishMap = (() => {
         });
       }
     }
-
+    // Heart / Favorite button
+    const isFav = (typeof FishFavorites !== 'undefined') && FishFavorites.isFavorite(lat, lng);
+    const savedDepthM = depthData && !depthData.onLand && depthData.depthM ? depthData.depthM : null;
+    rows.push(
+      '<div class="popup-fav-row">' +
+        '<button class="fav-btn' + (isFav ? ' favorited' : '') + '"' +
+        ' data-lat="' + lat.toFixed(6) + '"' +
+        ' data-lng="' + lng.toFixed(6) + '"' +
+        (savedDepthM ? ' data-depth-m="' + savedDepthM + '"' : '') +
+        '>' +
+        (isFav ? '\u2764\uFE0F Saved!' : '\uD83E\uDD0D Save Spot') +
+        '</button>' +
+      '</div>'
+    );
     return rows.join('');
   }
 
@@ -571,13 +666,22 @@ const FishMap = (() => {
 
       // Popup with spot details
       const speciesList = spot.species.join(', ');
+      const isFav = (typeof FishFavorites !== 'undefined') && FishFavorites.isFavorite(spot.lat, spot.lon);
       const popupHtml = `
-        <h4>🔥 ${esc(spot.name)}</h4>
-        ${popupRow('Activity', `${Math.round(intensity * 100)}% — ${intensity >= 0.8 ? 'Peak' : intensity >= 0.5 ? 'Good' : 'Moderate'}`)}
+        <h4>\uD83D\uDD25 ${esc(spot.name)}</h4>
+        ${popupRow('Activity', `${Math.round(intensity * 100)}% \u2014 ${intensity >= 0.8 ? 'Peak' : intensity >= 0.5 ? 'Good' : 'Moderate'}`)}
         ${popupRow('Month', esc(monthNames[month]))}
         ${popupRow('Species', esc(speciesList))}
         ${popupRow('Depth', esc(spot.depth))}
         <div class="spot-tip">${esc(spot.tip)}</div>
+        <div class="popup-fav-row">
+          <button class="fav-btn${isFav ? ' favorited' : ''}"
+            data-lat="${spot.lat.toFixed(6)}"
+            data-lng="${spot.lon.toFixed(6)}"
+            data-name="${esc(spot.name)}">
+            ${isFav ? '\u2764\uFE0F Saved!' : '\uD83E\uDD0D Save Spot'}
+          </button>
+        </div>
       `;
 
       label.bindPopup(popupHtml, { className: 'spot-popup', maxWidth: 280 });
@@ -596,5 +700,6 @@ const FishMap = (() => {
     }
   }
 
-  return { init, loadBuoys, getBuoyData, getMap, getTempClass, degToCompass, updateHotSpots };
+  return { init, loadBuoys, getBuoyData, getMap, getTempClass, degToCompass, updateHotSpots,
+           estimateWaterTemp, getNearestBuoys, showSpotAt, requestUserLocation };
 })();

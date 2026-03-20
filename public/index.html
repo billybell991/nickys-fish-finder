@@ -23,6 +23,7 @@
       <h1>Nicky's Fish Finder</h1>
     </div>
     <div class="top-bar-right">
+      <button id="btn-location" class="icon-btn" title="My Location">📍</button>
       <button id="btn-help" class="icon-btn" title="Help">❓</button>
       <button id="btn-refresh" class="icon-btn" title="Refresh Data">🔄</button>
     </div>
@@ -242,6 +243,7 @@
         <button class="tab active" data-tab="tab-ai">🎯 Fish Intel</button>
         <button class="tab" data-tab="tab-weather">🌤️ Weather</button>
         <button class="tab" data-tab="tab-buoys">🌊 Buoys</button>
+        <button class="tab" data-tab="tab-favorites">❤️ Spots</button>
       </div>
 
       <!-- AI Tab -->
@@ -285,6 +287,14 @@
         <h3>🌊 Buoy Readings</h3>
         <div id="buoy-list"></div>
       </div>
+
+      <!-- Favorites Tab -->
+      <div id="tab-favorites" class="tab-pane">
+        <h3>❤️ My Favorite Spots</h3>
+        <div id="favorites-list">
+          <p id="favorites-empty">No favorite spots saved yet.<br>Tap anywhere on the lake and press <strong>🤍 Save Spot</strong> to pin a location!</p>
+        </div>
+      </div>
     </div>
   </div>
 
@@ -299,7 +309,9 @@
   <script src="js/weather.js"></script>
   <script src="js/fishing-ai.js"></script>
   <script src="js/hotspots.js"></script>
+  <script src="js/favorites.js"></script>
   <script src="js/map.js"></script>
   <script src="js/app.js"></script>
+  <script src="js/chatbot.js"></script>
 </body>
 </html>

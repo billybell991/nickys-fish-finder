@@ -77,6 +77,19 @@
       refreshAllData();
     });
 
+    // Location button
+    const locBtn = document.getElementById('btn-location');
+    if (locBtn) {
+      locBtn.addEventListener('click', () => FishMap.requestUserLocation());
+    }
+
+    // Refresh the favorites tab whenever a spot is saved/removed
+    window.addEventListener('favorites-changed', () => {
+      if (document.getElementById('tab-favorites')?.classList.contains('active')) {
+        renderFavoritesTab();
+      }
+    });
+
     // Help modal
     const helpOverlay = document.getElementById('help-overlay');
     document.getElementById('btn-help').addEventListener('click', () => {
@@ -227,6 +240,7 @@
     document.querySelectorAll('.tab-pane').forEach(p => p.classList.remove('active'));
     document.querySelector(`[data-tab="${tabId}"]`).classList.add('active');
     document.getElementById(tabId).classList.add('active');
+    if (tabId === 'tab-favorites') renderFavoritesTab();
   }
 
   // ---- Data Loading ----
@@ -593,6 +607,117 @@
   function buoyRow(label, value, cssClass) {
     const cls = cssClass ? ` class="buoy-val ${sanitize(cssClass)}"` : ' class="buoy-val"';
     return `<div class="buoy-row"><span class="buoy-label">${sanitize(label)}</span><span${cls}>${sanitize(value)}</span></div>`;
+  }
+
+  // ---- Favorites Tab ----
+
+  function buildFavConditions(fav) {
+    const lines = [];
+
+    // Estimated current water temp from buoy IDW
+    if (buoyData && typeof FishMap.estimateWaterTemp === 'function') {
+      const tempEst = FishMap.estimateWaterTemp(fav.lat, fav.lng);
+      if (tempEst) {
+        const tempC = ((tempEst.temp - 32) * 5 / 9).toFixed(1);
+        lines.push(`🌡️ Est. water: ${tempC}°C`);
+      }
+    }
+
+    // Depth saved at time of heart-tap
+    if (fav.depthM) {
+      lines.push(`⬇️ Depth: ~${fav.depthM}m (${Math.round(fav.depthM * 3.281)}ft)`);
+    }
+
+    // Current solunar rating
+    const sol = Solunar.getInfo();
+    if (sol) lines.push(`🌙 Solunar: ${sol.fishingQuality}`);
+
+    // Nearest buoy reading
+    if (buoyData && typeof FishMap.getNearestBuoys === 'function') {
+      const nearest = FishMap.getNearestBuoys(fav.lat, fav.lng)[0];
+      if (nearest && !nearest.error) {
+        let line = `📡 ${nearest.name || nearest.id} (${nearest.dist.toFixed(0)} km)`;
+        if (nearest.waterTemp?.f != null && !isNaN(nearest.waterTemp.f)) {
+          line += ` — ${((nearest.waterTemp.f - 32) * 5 / 9).toFixed(1)}°C`;
+        }
+        if (nearest.wind?.speed?.mph != null && !isNaN(nearest.wind.speed.mph)) {
+          line += `, ${(nearest.wind.speed.mph * 1.60934).toFixed(0)} km/h winds`;
+        }
+        lines.push(line);
+      }
+    }
+
+    return lines;
+  }
+
+  function renderFavoritesTab() {
+    const list = document.getElementById('favorites-list');
+    if (!list) return;
+
+    if (typeof FishFavorites === 'undefined') {
+      list.innerHTML = '<p id="favorites-empty">Favorites unavailable.</p>';
+      return;
+    }
+
+    const favs = FishFavorites.getAll();
+
+    if (favs.length === 0) {
+      list.innerHTML =
+        '<p id="favorites-empty">No favorite spots saved yet.<br>' +
+        'Tap anywhere on the lake and press <strong>🤍 Save Spot</strong> to pin a location!</p>';
+      return;
+    }
+
+    list.innerHTML = '';
+
+    // Show newest first
+    favs.slice().reverse().forEach(fav => {
+      const card = document.createElement('div');
+      card.className = 'fav-card';
+
+      const spotName = fav.name || `${fav.lat.toFixed(4)}°N, ${Math.abs(fav.lng).toFixed(4)}°W`;
+      const savedDate = new Date(fav.savedAt).toLocaleDateString('en-CA', {
+        year: 'numeric', month: 'short', day: 'numeric'
+      });
+
+      const conditions = buildFavConditions(fav);
+      const condRows = conditions
+        .map(c => `<div class="fav-condition-row">${sanitize(c)}</div>`)
+        .join('');
+
+      card.innerHTML =
+        '<div class="fav-card-header">' +
+          `<div class="fav-name">${sanitize(spotName)}</div>` +
+          `<button class="fav-remove" data-lat="${fav.lat}" data-lng="${fav.lng}" title="Remove">🗑️</button>` +
+        '</div>' +
+        `<div class="fav-saved">Saved ${sanitize(savedDate)}</div>` +
+        (condRows ? `<div class="fav-conditions">${condRows}</div>` : '') +
+        `<button class="fav-go-btn" data-lat="${fav.lat}" data-lng="${fav.lng}">📍 Show on Map</button>`;
+
+      list.appendChild(card);
+    });
+
+    // Wire up buttons
+    list.querySelectorAll('.fav-go-btn').forEach(btn => {
+      btn.addEventListener('click', () => {
+        const lat = parseFloat(btn.dataset.lat);
+        const lng = parseFloat(btn.dataset.lng);
+        // Close layer panel
+        document.getElementById('layer-panel')?.classList.remove('expanded');
+        const peekSpan = document.querySelector('#layer-peek span');
+        if (peekSpan) peekSpan.textContent = '🗺️ Tap for map layers';
+        // Collapse bottom panel and navigate
+        collapseBottomPanel();
+        FishMap.showSpotAt(lat, lng);
+      });
+    });
+
+    list.querySelectorAll('.fav-remove').forEach(btn => {
+      btn.addEventListener('click', () => {
+        FishFavorites.remove(parseFloat(btn.dataset.lat), parseFloat(btn.dataset.lng));
+        renderFavoritesTab();
+      });
+    });
   }
 
   // ---- Utility ----
