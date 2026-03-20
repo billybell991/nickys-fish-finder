@@ -1294,6 +1294,12 @@ html, body {
   font-size: 26px;
   box-shadow: 0 4px 16px rgba(0, 0, 0, 0.5);
   transition: transform 0.2s, box-shadow 0.2s;
+  overflow: hidden;
+}
+
+.chatbot-bubble .chatbot-avatar-img {
+  width: 48px;
+  height: 48px;
 }
 
 .chatbot-toggle.active .chatbot-bubble {
@@ -1348,6 +1354,14 @@ html, body {
 .chatbot-avatar {
   font-size: 28px;
   line-height: 1;
+}
+
+.chatbot-avatar-img {
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  object-fit: cover;
+  display: block;
 }
 
 .chatbot-header-info {
@@ -1417,6 +1431,11 @@ html, body {
   margin-bottom: 2px;
 }
 
+.chat-message-avatar .chatbot-avatar-img {
+  width: 24px;
+  height: 24px;
+}
+
 .chat-bubble {
   max-width: 82%;
   padding: 8px 12px;
@@ -1469,6 +1488,11 @@ html, body {
 
 .typing-avatar {
   font-size: 16px;
+}
+
+.typing-avatar .chatbot-avatar-img {
+  width: 20px;
+  height: 20px;
 }
 
 .typing-dots {

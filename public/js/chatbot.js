@@ -51,7 +51,7 @@
     toggle.className = 'chatbot-toggle';
     toggle.setAttribute('aria-label', 'Chat with Cheeseburger Hick-Nick');
     toggle.innerHTML =
-      '<div class="chatbot-bubble">🎣</div>' +
+      '<div class="chatbot-bubble"><img src="/images/hick-nick-avatar.png" alt="Hick-Nick" class="chatbot-avatar-img"></div>' +
       '<span class="chatbot-toggle-label">Hick-Nick</span>';
 
     var panel = document.createElement('div');
@@ -61,7 +61,7 @@
     panel.setAttribute('aria-live', 'polite');
     panel.innerHTML =
       '<div class="chatbot-header">' +
-        '<div class="chatbot-avatar">🎣</div>' +
+        '<div class="chatbot-avatar"><img src="/images/hick-nick-avatar.png" alt="Hick-Nick" class="chatbot-avatar-img"></div>' +
         '<div class="chatbot-header-info">' +
           '<div class="chatbot-header-name">Cheeseburger Hick-Nick</div>' +
           '<div class="chatbot-header-status"><span class="chatbot-status-dot"></span> your local fishing guide</div>' +
@@ -70,7 +70,7 @@
       '</div>' +
       '<div class="chatbot-messages" id="chatbot-messages"></div>' +
       '<div class="chatbot-typing" id="chatbot-typing">' +
-        '<span class="typing-avatar">🎣</span>' +
+        '<span class="typing-avatar"><img src="/images/hick-nick-avatar.png" alt="Hick-Nick" class="chatbot-avatar-img"></span>' +
         '<div class="typing-dots"><span></span><span></span><span></span></div>' +
       '</div>' +
       '<div class="chatbot-input-area">' +
@@ -133,7 +133,7 @@
     avatarDiv.className = 'chat-message-avatar';
 
     if (role === 'bot') {
-      avatarDiv.textContent = '🎣';
+      avatarDiv.innerHTML = '<img src="/images/hick-nick-avatar.png" alt="Hick-Nick" class="chatbot-avatar-img">';
       bubble.innerHTML = renderBotText(text);
       div.appendChild(avatarDiv);
       div.appendChild(bubble);
